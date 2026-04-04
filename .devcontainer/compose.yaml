@@ -1,0 +1,40 @@
+services:
+  insight:
+    container_name: insight
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: insight
+    restart: unless-stopped
+    depends_on:
+      insight-database:
+        condition: service_healthy
+    volumes:
+      - ..:/workspaces/Insight:cached
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    networks:
+      - insight_internal
+
+  insight-database:
+    image: postgres:18-alpine
+    container_name: insight-database
+    restart: unless-stopped
+    volumes:
+      - insight_database_data:/var/lib/postgresql
+    environment:
+      POSTGRES_USER: "dev_container"
+      POSTGRES_PASSWORD: "insight"
+      POSTGRES_DB: "Insight"
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - insight_internal
+
+volumes:
+  insight_database_data:
+
+networks:
+  insight_internal:
