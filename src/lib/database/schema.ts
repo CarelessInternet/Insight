@@ -1,5 +1,7 @@
 import { relations, sql } from 'drizzle-orm';
-import { boolean, index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { createSelectSchema } from 'drizzle-zod';
+import z from 'zod';
 
 export const user = pgTable('user', {
 	id: text('id').primaryKey(),
@@ -91,6 +93,8 @@ export const passkey = pgTable(
 	(table) => [index('passkey_userId_idx').on(table.userId), index('passkey_credentialID_idx').on(table.credentialID)],
 );
 
+export const statusEnum = pgEnum('status', ['valid', 'invalid']);
+
 export const emailAccount = pgTable(
 	'emailAccount',
 	{
@@ -101,9 +105,15 @@ export const emailAccount = pgTable(
 		hostname: text('hostname').notNull(),
 		email: text('email').notNull(),
 		password: text('password').notNull(),
+		status: statusEnum().notNull(),
 	},
 	(table) => [index('emailAccount_userId_idx').on(table.userId)],
 );
+
+export const emailAccountSchema = createSelectSchema(emailAccount, {
+	hostname: z.hostname().nonempty(),
+	email: z.email().nonempty(),
+});
 
 export const userRelations = relations(user, ({ many }) => ({
 	sessions: many(session),

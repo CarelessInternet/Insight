@@ -1,24 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
-import { getRequestHeaders } from '@tanstack/react-start/server';
 import { ModeToggle } from '~/components/toggle';
-import { auth } from '~/lib/authentication/server';
-
-const getUser = createServerFn({ method: 'GET' }).handler(() => {
-	return auth.api.getSession({ headers: getRequestHeaders() });
-});
+import { getSession } from '~/lib/middleware';
 
 export const Route = createFileRoute('/')({
+	beforeLoad: async () => await getSession(),
 	component: Home,
-	loader: async () => await getUser(),
 });
 
 function Home() {
-	const state = Route.useLoaderData();
+	const state = Route.useRouteContext();
 
 	return (
 		<>
-			User: {state?.user.email ?? 'None.'}
+			User: {state?.user?.email ?? 'None.'}
 			<ModeToggle />
 		</>
 	);

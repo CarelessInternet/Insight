@@ -1,37 +1,35 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { getRequestHeaders } from '@tanstack/react-start/server';
-import { beforeLoad } from '~/lib/authentication/middleware';
 import { auth } from '~/lib/authentication/server';
+import { sessionMiddleware } from '~/lib/middleware';
 import queryClient from '~/lib/query';
-import Email from './-email';
-import { emailAccountsOptions } from './-email.table';
+import EmailAccounts, { emailAccountsOptions } from './-email.table';
 import Passkey from './-passkey';
 
 const getUserData = createServerFn({ method: 'GET' })
-	.inputValidator((data: typeof auth.$Infer.Session) => data)
-	.handler(async ({ data }) => {
+	.middleware([sessionMiddleware])
+	.handler(async () => {
 		const [, passkeys] = await Promise.all([
-			queryClient.prefetchQuery(emailAccountsOptions),
+			queryClient.prefetchQuery(emailAccountsOptions()),
 			auth.api.listPasskeys({ headers: getRequestHeaders() }),
 		]);
 
-		return { passkeys, ...data };
+		return passkeys;
 	});
 
 export const Route = createFileRoute('/account/settings/')({
-	beforeLoad: async () => await beforeLoad(),
 	component: RouteComponent,
-	loader: async ({ context }) => await getUserData({ data: context }),
+	loader: async () => await getUserData(),
 });
 
 function RouteComponent() {
-	const { passkeys } = Route.useLoaderData();
+	const passkeys = Route.useLoaderData();
 
 	return (
-		<div>
+		<div className="space-y-2 ml-2">
 			<Passkey passkeys={passkeys} />
-			<Email />
+			<EmailAccounts />
 		</div>
 	);
 }

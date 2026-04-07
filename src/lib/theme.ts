@@ -6,9 +6,9 @@ const theme = z.union([z.literal('light'), z.literal('dark'), z.literal('system'
 const storageKey = 'ui-theme';
 
 export type Theme = z.infer<typeof theme>;
-export const getThemeServerFn = createServerFn().handler(() => {
-	return (getCookie(storageKey) || 'system') as Theme;
-});
+export const getThemeServerFn = createServerFn({ method: 'GET' }).handler(
+	() => (getCookie(storageKey) || 'system') as Theme,
+);
 
 export const setThemeServerFn = createServerFn({ method: 'POST' })
 	.inputValidator(theme)

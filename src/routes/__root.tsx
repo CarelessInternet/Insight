@@ -1,7 +1,5 @@
 /// <reference types="vite/client" />
 
-import { TanStackDevtools } from '@tanstack/react-devtools';
-import { formDevtoolsPlugin } from '@tanstack/react-form-devtools';
 import { createRootRoute, HeadContent, Outlet, ScriptOnce, Scripts } from '@tanstack/react-router';
 import { createMiddleware } from '@tanstack/react-start';
 import type { PropsWithChildren } from 'react';
@@ -13,7 +11,7 @@ import appCss from '../styles/app.css?url';
 
 const loggingRequestMiddleware = createMiddleware({ type: 'request' }).server(async ({ next }) => {
 	const data = await next();
-	logger.http(`[${data.response.status}] ${data.request.method} ${data.pathname}`);
+	logger.http('[%s] %s %s', data.response.status, data.request.method, data.pathname);
 
 	return data;
 });
@@ -51,7 +49,6 @@ function RootComponent() {
 		<ThemeProvider theme={theme}>
 			<RootDocument>
 				<Outlet />
-				<TanStackDevtools plugins={[formDevtoolsPlugin()]} />
 			</RootDocument>
 		</ThemeProvider>
 	);
@@ -77,6 +74,7 @@ function RootDocument({ children }: PropsWithChildren) {
 			</head>
 			<body>
 				{children}
+				{/* pointer-events-auto allows toasts to be dismissed with a dialog open (see sonner.tsx). */}
 				<Toaster richColors className="pointer-events-auto" />
 				<Scripts />
 			</body>

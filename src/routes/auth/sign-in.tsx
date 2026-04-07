@@ -4,13 +4,14 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { setResponseStatus } from '@tanstack/react-start/server';
 import { Image } from '@unpic/react';
-import { LoaderCircle, LogIn } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import z from 'zod';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
+import { Spinner } from '~/components/ui/spinner';
 import { authenticationClient } from '~/lib/authentication/client';
 import { auth } from '~/lib/authentication/server';
 import { getFormDataFromServer, isInvalidField, listeners } from '~/lib/forms';
@@ -47,7 +48,7 @@ export const handleForm = createServerFn({ method: 'POST' })
 				return err.response;
 			}
 
-			logger.error('Internal error while signing in:', err);
+			logger.error('Internal error while signing in\n%s', err);
 			setResponseStatus(500);
 		}
 	});
@@ -161,9 +162,8 @@ function RouteComponent() {
 										<form.Subscribe selector={(formState) => [formState.canSubmit, formState.isSubmitting]}>
 											{([canSubmit, isSubmitting]) => (
 												<Button type="submit" disabled={!canSubmit} aria-disabled={!canSubmit}>
-													<LogIn />
-													{isSubmitting && <LoaderCircle className="mr-2 size-4 animate-spin" />}
-													{isSubmitting ? '...' : 'Sign In'}
+													{isSubmitting ? <Spinner /> : <LogIn />}
+													Sign In
 												</Button>
 											)}
 										</form.Subscribe>
