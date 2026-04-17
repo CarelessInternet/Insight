@@ -1,6 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
-import { boolean, index, integer, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-import { createSelectSchema } from 'drizzle-zod';
+import { boolean, index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import z from 'zod';
 
 export const user = pgTable('user', {
@@ -104,13 +104,26 @@ export const emailAccount = pgTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		hostname: text('hostname').notNull(),
 		email: text('email').notNull(),
+		emailLookup: text('email_lookup').notNull(),
 		password: text('password').notNull(),
 		status: statusEnum().notNull(),
 	},
-	(table) => [index('emailAccount_userId_idx').on(table.userId)],
+	(table) => [
+		index('emailAccount_userId_idx').on(table.userId),
+		// The email account is unique per user, but multiple users may have the same email account.
+		uniqueIndex('emailAccount_emailLookup_indx').on(table.userId, table.emailLookup),
+	],
 );
 
-export const emailAccountSchema = createSelectSchema(emailAccount, {
+export const aesPrefix = 'aes-256-gcm' as const;
+export const hmacPrefix = 'hmac' as const;
+
+export const emailAccountSelectSchema = createSelectSchema(emailAccount, {
+	hostname: z.stringFormat('encrypted-data', new RegExp(`^${aesPrefix}:(.+):(.+)$`)),
+	email: z.stringFormat('encrypted-data', new RegExp(`^${hmacPrefix}:(.+)$`)),
+});
+
+export const emailAccountInsertSchema = createInsertSchema(emailAccount, {
 	hostname: z.hostname().nonempty(),
 	email: z.email().nonempty(),
 });

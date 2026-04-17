@@ -1,17 +1,14 @@
 import { mergeForm, useForm } from '@tanstack/react-form';
-import {
-	createServerValidate,
-	formOptions,
-	initialFormState,
-	ServerValidateError,
-	useTransform,
-} from '@tanstack/react-form-start';
+import { createServerValidate, initialFormState, ServerValidateError, useTransform } from '@tanstack/react-form-start';
 import { useQueryClient } from '@tanstack/react-query';
 import { createServerFn } from '@tanstack/react-start';
-import { CircleX, Eraser, MailPlus } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { and, eq } from 'drizzle-orm';
+import { createSelectSchema } from 'drizzle-zod';
+import { CircleX, Eraser, PencilLine } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import z from 'zod';
+import type DropdownDialog from '~/components/DropdownDialog';
 import { Button } from '~/components/ui/button';
 import {
 	Dialog,
@@ -21,16 +18,14 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogTrigger,
 } from '~/components/ui/dialog';
-import { Field, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
 import { handleInteractOutside } from '~/components/ui/sonner';
 import { Spinner } from '~/components/ui/spinner';
-import { encrypt, hash } from '~/lib/crypto.server';
+import { decrypt, encrypt, hash } from '~/lib/crypto.server';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount } from '~/lib/database/schema';
-import { type EmailCredentialsSchema, emailCredentialsSchema } from '~/lib/email';
 import Email from '~/lib/email.server';
 import {
 	type FormDataServer,
@@ -42,38 +37,38 @@ import {
 } from '~/lib/forms';
 import logger from '~/lib/logger.server';
 import { sessionMiddleware } from '~/lib/middleware';
-import { emailAccountsOptions } from './-email.table';
+import { type EmailAccount, emailAccountQueryKey } from './-email.table';
 
-const accountOptions = formOptions({
-	defaultValues: {
-		hostname: '',
-		email: '',
-		password: '',
-	} satisfies EmailCredentialsSchema,
-});
+const emailSchema = createSelectSchema(emailAccount, {
+	hostname: z.hostname().nonempty(),
+	email: z.email().nonempty(),
+}).omit({ emailLookup: true, status: true, userId: true });
 
-const serverValidate = createServerValidate({
-	...accountOptions,
-	onServerValidate: emailCredentialsSchema,
-});
+type EmailSchema = z.infer<typeof emailSchema>;
 
-export const handleForm = createServerFn({ method: 'POST' })
+const serverValidate = createServerValidate({ onServerValidate: emailSchema });
+
+const handleForm = createServerFn({ method: 'POST' })
 	.middleware([sessionMiddleware])
 	.inputValidator(z.instanceof(FormData))
 	.handler(async (ctx) => {
 		try {
-			const data = (await serverValidate(ctx.data)) as EmailCredentialsSchema;
+			const data = (await serverValidate(ctx.data)) as EmailSchema;
 			const userId = ctx.context.user.id;
-			const emailLookup = await hash(data.email);
-			const email = await database.query.emailAccount.findFirst({
-				where: (field, { and, eq }) => and(eq(field.userId, userId), eq(field.emailLookup, emailLookup)),
+			const currentEmail = await database.query.emailAccount.findFirst({
+				where: (field, { and, eq }) => and(eq(field.id, data.id), eq(field.userId, userId)),
 			});
 
-			if (email) {
-				return formResponse({ message: 'This email already exists on your account.', success: false });
+			if (!currentEmail) {
+				return formResponse({ message: 'The email account could not be found on your account.', success: false });
 			}
 
-			await using imapEmail = new Email(data);
+			const newDecryptedCredentials = {
+				email: data.email,
+				hostname: data.hostname,
+				password: data.password || (await decrypt(currentEmail.password)),
+			} as const;
+			await using imapEmail = new Email(newDecryptedCredentials);
 			await imapEmail.connect();
 
 			if (!imapEmail.authenticated) {
@@ -83,38 +78,53 @@ export const handleForm = createServerFn({ method: 'POST' })
 				});
 			}
 
-			await database.insert(emailAccount).values({
-				email: await encrypt(data.email),
-				emailLookup: await hash(data.email),
-				hostname: await encrypt(data.hostname),
-				password: await encrypt(data.password),
-				status: 'valid',
-				userId,
-			});
+			const [email] = await database
+				.update(emailAccount)
+				.set({
+					email: await encrypt(data.email),
+					emailLookup: await hash(data.email),
+					hostname: await encrypt(data.hostname),
+					password: data.password ? await encrypt(data.password) : currentEmail.password,
+					status: 'valid',
+				})
+				.where(and(eq(emailAccount.userId, userId), eq(emailAccount.id, data.id)))
+				.returning();
 
-			logger.info('Email account added by user:%s', userId);
-			return formResponse({ message: 'Email account successfully added!', success: true });
+			logger.info('Email:%s account updated by user:%s', email?.id, email?.userId);
+			return formResponse({ message: 'Email account successfully modified!', success: true });
 		} catch (err) {
 			if (err instanceof ServerValidateError) {
 				return err.response;
 			}
 
-			logger.error('Internal error while adding an email account\n%s', err);
+			logger.error('Internal error while updating an email account\n%s', err);
 			return formResponse({ message: 'There was an internal error.', success: false });
 		}
 	});
 
-export default function AddEmailAccount() {
+export default function EmailEdit(properties: DropdownDialog<EmailAccount, true>) {
+	if (!properties.row) {
+		return null;
+	}
+
+	return <Component {...(properties as unknown as DropdownDialog<EmailAccount>)} />;
+}
+
+function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 	const queryClient = useQueryClient();
 	// biome-ignore lint/style/noNonNullAssertion: useRef.
 	const ref = useRef<HTMLFormElement>(null!);
-	const [dialogOpen, setDialogOpen] = useState(false);
 	const [state, setState] = useState<FormDataServer>(initialFormState);
 	const form = useForm({
-		...accountOptions,
+		defaultValues: {
+			id: row.id,
+			email: row.email,
+			hostname: row.hostname,
+			password: '',
+		} satisfies EmailSchema,
 		validators: {
-			onSubmit: emailCredentialsSchema,
-			onChange: emailCredentialsSchema,
+			onSubmit: emailSchema,
+			onChange: emailSchema,
 		},
 		listeners,
 		transform: useTransform((baseForm) => mergeForm(baseForm, state), [state]),
@@ -126,10 +136,10 @@ export default function AddEmailAccount() {
 
 			if (isFormResponse(response)) {
 				if (response.success) {
-					queryClient.invalidateQueries({ queryKey: [emailAccountsOptions().queryKey.at(0)] });
+					queryClient.invalidateQueries({ queryKey: [emailAccountQueryKey] });
 					toast.dismiss();
 					toast.success(response.message);
-					setDialogOpen(false);
+					setOpen(false);
 					formApi.reset();
 				} else {
 					toast.error(response.message, { closeButton: true, duration: Infinity });
@@ -138,15 +148,26 @@ export default function AddEmailAccount() {
 		},
 	});
 
+	// Change the form values when the user selects a different table row from the original.
+	useEffect(
+		() =>
+			form.reset({
+				id: row.id,
+				email: row.email,
+				hostname: row.hostname,
+				password: '',
+			}),
+		[form.reset, row.id, row.email, row.hostname],
+	);
+
 	return (
-		<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-			<DialogTrigger asChild>
-				<Button>
-					<MailPlus />
-					Add Email
-				</Button>
-			</DialogTrigger>
-			<DialogContent onInteractOutside={handleInteractOutside} className="sm:max-w-lg">
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogContent
+				onInteractOutside={handleInteractOutside}
+				// Don't highlight the first form field.
+				onOpenAutoFocus={(e) => e.preventDefault()}
+				className="sm:max-w-lg"
+			>
 				<form
 					ref={ref}
 					onSubmit={(e) => {
@@ -159,10 +180,15 @@ export default function AddEmailAccount() {
 					className="contents"
 				>
 					<DialogHeader>
-						<DialogTitle>Add Email Account</DialogTitle>
-						<DialogDescription>Add an email account to your Insight account.</DialogDescription>
+						<DialogTitle className="inline-block">
+							Edit <p className="inline underline">{row.email}</p>
+						</DialogTitle>
+						<DialogDescription>Modify the credentials to the email account.</DialogDescription>
 					</DialogHeader>
 					<FieldGroup>
+						<form.Field name="id">
+							{(field) => <Input id={field.name} type="hidden" name={field.name} value={field.state.value} />}
+						</form.Field>
 						<form.Field name="hostname">
 							{(field) => {
 								const isInvalid = isInvalidField(field);
@@ -214,6 +240,7 @@ export default function AddEmailAccount() {
 								return (
 									<Field data-invalid={isInvalid}>
 										<FieldLabel htmlFor={field.name}>Password</FieldLabel>
+										<FieldDescription>Leave this field empty to keep the same password.</FieldDescription>
 										<Input
 											id={field.name}
 											type="password"
@@ -243,8 +270,8 @@ export default function AddEmailAccount() {
 						<form.Subscribe selector={(formState) => [formState.canSubmit, formState.isSubmitting]}>
 							{([canSubmit, isSubmitting]) => (
 								<Button type="submit" disabled={!canSubmit} aria-disabled={!canSubmit}>
-									{isSubmitting ? <Spinner /> : <MailPlus />}
-									Add Account
+									{isSubmitting ? <Spinner /> : <PencilLine />}
+									Edit Account
 								</Button>
 							)}
 						</form.Subscribe>

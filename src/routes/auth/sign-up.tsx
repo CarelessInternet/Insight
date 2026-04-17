@@ -1,11 +1,10 @@
 import { mergeForm, useForm } from '@tanstack/react-form';
 import { createServerValidate, ServerValidateError, useTransform } from '@tanstack/react-form-start';
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { setResponseStatus } from '@tanstack/react-start/server';
 import { Image } from '@unpic/react';
 import { UserPlus } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import z from 'zod';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
@@ -13,7 +12,7 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '~/c
 import { Input } from '~/components/ui/input';
 import { Spinner } from '~/components/ui/spinner';
 import { auth } from '~/lib/authentication/server';
-import { getFormDataFromServer, isInvalidField, listeners } from '~/lib/forms';
+import { formResponse, getFormDataFromServer, isFormResponse, isInvalidField, listeners } from '~/lib/forms';
 import logger from '~/lib/logger.server';
 import { signUpOptions, signUpSchema } from './-form';
 
@@ -41,21 +40,27 @@ export const handleForm = createServerFn({ method: 'POST' })
 				},
 			});
 
-			logger.info('Created new account with user:%s', user.id);
-			return redirect({ to: '/account/settings' });
+			logger.info('Created a new user:%s', user.id);
+			return formResponse({ message: 'Succcessfully signed up!', success: true });
 		} catch (err) {
 			if (err instanceof ServerValidateError) {
 				return err.response;
 			}
 
-			logger.error('Internal error while signing up\n%s', err);
-			setResponseStatus(500);
+			logger.error('Internal error while signing up: %s', err);
+			return formResponse({
+				message: err instanceof Error ? err.message : 'There was an internal error.',
+				success: false,
+			});
 		}
 	});
 
 function RouteComponent() {
 	const state = Route.useLoaderData();
-	const ref = useRef<HTMLFormElement>(null);
+	// biome-ignore lint/style/noNonNullAssertion: useRef.
+	const ref = useRef<HTMLFormElement>(null!);
+	const [error, setError] = useState('');
+	const navigate = useNavigate();
 	const form = useForm({
 		...signUpOptions,
 		validators: {
@@ -64,7 +69,18 @@ function RouteComponent() {
 		},
 		listeners,
 		transform: useTransform((baseForm) => mergeForm(baseForm, state), [state]),
-		onSubmit: () => ref.current?.submit(),
+		onSubmit: async () => {
+			const data = new FormData(ref.current);
+			const response = await handleForm({ data });
+
+			if (isFormResponse(response)) {
+				if (response.success) {
+					navigate({ to: '/account/settings' });
+				} else {
+					setError(response.message);
+				}
+			}
+		},
 	});
 
 	return (
@@ -94,10 +110,10 @@ function RouteComponent() {
 								method="post"
 								encType="multipart/form-data"
 							>
+								{error && <p className="text-destructive text-center mb-6">{error}</p>}
 								<FieldGroup>
-									<form.Field
-										name="username"
-										children={(field) => {
+									<form.Field name="username">
+										{(field) => {
 											const isInvalid = isInvalidField(field);
 
 											return (
@@ -117,10 +133,9 @@ function RouteComponent() {
 												</Field>
 											);
 										}}
-									></form.Field>
-									<form.Field
-										name="email"
-										children={(field) => {
+									</form.Field>
+									<form.Field name="email">
+										{(field) => {
 											const isInvalid = isInvalidField(field);
 
 											return (
@@ -140,10 +155,9 @@ function RouteComponent() {
 												</Field>
 											);
 										}}
-									></form.Field>
-									<form.Field
-										name="password"
-										children={(field) => {
+									</form.Field>
+									<form.Field name="password">
+										{(field) => {
 											const isInvalid = isInvalidField(field);
 
 											return (
@@ -162,7 +176,7 @@ function RouteComponent() {
 												</Field>
 											);
 										}}
-									></form.Field>
+									</form.Field>
 									<Field>
 										<form.Subscribe selector={(formState) => [formState.canSubmit, formState.isSubmitting]}>
 											{([canSubmit, isSubmitting]) => (

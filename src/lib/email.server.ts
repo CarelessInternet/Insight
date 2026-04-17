@@ -1,11 +1,12 @@
 import { ImapFlow } from 'imapflow';
-import type { EmailSchema } from './email';
+import { decrypt } from './crypto.server';
+import type { EmailCredentialsSchema } from './email';
 import logger from './logger.server';
 
 export default class Email implements AsyncDisposable {
 	private client: ImapFlow;
 
-	constructor(private credentials: EmailSchema) {
+	constructor(credentials: EmailCredentialsSchema) {
 		this.client = new ImapFlow({
 			auth: {
 				user: credentials.email,
@@ -21,19 +22,22 @@ export default class Email implements AsyncDisposable {
 		return this.client.authenticated;
 	}
 
-	public static async connect(credentials: EmailSchema) {
-		await using email = new Email(credentials);
-		await email.establishConnection();
+	public static async decryptCredentials(account: EmailCredentialsSchema) {
+		const [email, hostname, password] = await Promise.all([
+			decrypt(account.email),
+			decrypt(account.hostname),
+			decrypt(account.password),
+		]);
 
-		return email;
+		return { email, hostname, password } satisfies EmailCredentialsSchema;
 	}
 
-	private async establishConnection() {
+	public async connect() {
 		try {
 			await this.client.connect();
-			logger.info('Connected and authenticated to email client on the hostname %s', this.credentials.hostname);
+			logger.info('Authenticated to an email client');
 		} catch (err) {
-			logger.warn('Failed to authenticate email client on the hostname %s\n%s', this.credentials.hostname, err);
+			logger.warn('Failed to authenticate an email client: %s', err);
 		}
 	}
 

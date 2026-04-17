@@ -1,11 +1,10 @@
 import { mergeForm, useForm } from '@tanstack/react-form';
 import { createServerValidate, ServerValidateError, useTransform } from '@tanstack/react-form-start';
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { setResponseStatus } from '@tanstack/react-start/server';
 import { Image } from '@unpic/react';
 import { LogIn } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import z from 'zod';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
@@ -14,7 +13,7 @@ import { Input } from '~/components/ui/input';
 import { Spinner } from '~/components/ui/spinner';
 import { authenticationClient } from '~/lib/authentication/client';
 import { auth } from '~/lib/authentication/server';
-import { getFormDataFromServer, isInvalidField, listeners } from '~/lib/forms';
+import { formResponse, getFormDataFromServer, isFormResponse, isInvalidField, listeners } from '~/lib/forms';
 import logger from '~/lib/logger.server';
 import { signInOptions, signInSchema } from './-form';
 
@@ -41,21 +40,27 @@ export const handleForm = createServerFn({ method: 'POST' })
 				},
 			});
 
-			logger.info('Signed in user%s via email and password', user.id);
-			return redirect({ to: '/account/settings' });
+			logger.info('Signed in user:%s via email and password', user.id);
+			return formResponse({ message: 'Successfully signed in!', success: true });
 		} catch (err) {
 			if (err instanceof ServerValidateError) {
 				return err.response;
 			}
 
-			logger.error('Internal error while signing in\n%s', err);
-			setResponseStatus(500);
+			logger.error('Internal error while signing in: %s', err);
+			return formResponse({
+				message: err instanceof Error ? err.message : 'There was an internal error.',
+				success: false,
+			});
 		}
 	});
 
 function RouteComponent() {
 	const state = Route.useLoaderData();
-	const ref = useRef<HTMLFormElement>(null);
+	// biome-ignore lint/style/noNonNullAssertion: useRef.
+	const ref = useRef<HTMLFormElement>(null!);
+	const [error, setError] = useState('');
+	const navigate = useNavigate();
 	const form = useForm({
 		...signInOptions,
 		validators: {
@@ -64,9 +69,19 @@ function RouteComponent() {
 		},
 		listeners,
 		transform: useTransform((baseForm) => mergeForm(baseForm, state), [state]),
-		onSubmit: () => ref.current?.submit(),
+		onSubmit: async () => {
+			const data = new FormData(ref.current);
+			const response = await handleForm({ data });
+
+			if (isFormResponse(response)) {
+				if (response.success) {
+					navigate({ to: '/account/settings' });
+				} else {
+					setError(response.message);
+				}
+			}
+		},
 	});
-	const navigate = useNavigate();
 
 	useEffect(() => {
 		if (!PublicKeyCredential.isConditionalMediationAvailable?.()) {
@@ -76,7 +91,7 @@ function RouteComponent() {
 		void authenticationClient.signIn.passkey({
 			autoFill: true,
 			fetchOptions: {
-				onSuccess: () => {
+				onSuccess() {
 					navigate({ to: '/account/settings' });
 				},
 			},
@@ -111,9 +126,9 @@ function RouteComponent() {
 								encType="multipart/form-data"
 							>
 								<FieldGroup>
-									<form.Field
-										name="email"
-										children={(field) => {
+									{error && <p className="text-destructive text-center">{error}</p>}
+									<form.Field name="email">
+										{(field) => {
 											const isInvalid = isInvalidField(field);
 
 											return (
@@ -134,10 +149,9 @@ function RouteComponent() {
 												</Field>
 											);
 										}}
-									></form.Field>
-									<form.Field
-										name="password"
-										children={(field) => {
+									</form.Field>
+									<form.Field name="password">
+										{(field) => {
 											const isInvalid = isInvalidField(field);
 
 											return (
@@ -157,7 +171,7 @@ function RouteComponent() {
 												</Field>
 											);
 										}}
-									></form.Field>
+									</form.Field>
 									<Field>
 										<form.Subscribe selector={(formState) => [formState.canSubmit, formState.isSubmitting]}>
 											{([canSubmit, isSubmitting]) => (

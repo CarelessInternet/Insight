@@ -1,14 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { emailAccountSchema } from '~/lib/database/schema';
+import { emailAccountSelectSchema } from '~/lib/database/schema';
 import { sessionMiddleware } from '~/lib/middleware';
-import queryClient from '~/lib/query';
+import getQueryClient from '~/lib/query';
 import Inbox, { inboxOptions } from './-inbox';
 
 const getMessages = createServerFn({ method: 'GET' })
 	.middleware([sessionMiddleware])
-	.inputValidator(emailAccountSchema.shape.id)
-	.handler(async ({ data: id }) => await queryClient.prefetchQuery(inboxOptions(id)));
+	.inputValidator(emailAccountSelectSchema.shape.id)
+	.handler(({ data: id }) => getQueryClient().ensureQueryData(inboxOptions(id)));
 
 export const Route = createFileRoute('/inbox/$id/')({
 	component: RouteComponent,

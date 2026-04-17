@@ -1,5 +1,5 @@
 import { createLogger, format, transports } from 'winston';
-import { environment } from './environment';
+import { environment } from './environment.server';
 
 const { colorize, combine, errors, printf, splat, timestamp } = format;
 const logger = createLogger({

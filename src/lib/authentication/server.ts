@@ -1,8 +1,9 @@
+import '@tanstack/react-start/server-only';
 import { passkey } from '@better-auth/passkey';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { tanstackStartCookies } from 'better-auth/tanstack-start';
-import { database } from '../database/drizzle';
+import { database } from '../database/drizzle.server';
 import * as schema from '../database/schema';
 
 export const auth = betterAuth({

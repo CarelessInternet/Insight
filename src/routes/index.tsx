@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ModeToggle } from '~/components/toggle';
+import ModeToggle from '~/components/toggle';
 import { getSession } from '~/lib/middleware';
 
 export const Route = createFileRoute('/')({

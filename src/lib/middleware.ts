@@ -2,8 +2,9 @@ import { redirect } from '@tanstack/react-router';
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { getRequestHeaders } from '@tanstack/react-start/server';
 import { auth } from './authentication/server';
-import { database } from './database/drizzle';
-import { emailAccountSchema } from './database/schema';
+import { database } from './database/drizzle.server';
+import { emailAccountSelectSchema } from './database/schema';
+import Email from './email.server';
 import logger from './logger.server';
 
 export const getSession = createServerFn({ method: 'GET' }).handler(
@@ -27,9 +28,9 @@ export const sessionMiddleware = createMiddleware({ type: 'function' }).server(
 
 export const inboxMiddleware = createMiddleware({ type: 'function' })
 	.middleware([sessionMiddleware])
-	.inputValidator(emailAccountSchema.shape.id)
+	.inputValidator(emailAccountSelectSchema.shape.id)
 	.server(async ({ context, data: id, next }) => {
-		const email = await database.query.emailAccount.findFirst({
+		let email = await database.query.emailAccount.findFirst({
 			where: (field, { and, eq }) =>
 				and(eq(field.userId, context.user.id), eq(field.id, id), eq(field.status, 'valid')),
 		});
@@ -39,6 +40,11 @@ export const inboxMiddleware = createMiddleware({ type: 'function' })
 			// Redirecting is broken...
 			throw redirect({ to: '/account/settings' });
 		}
+
+		email = {
+			...email,
+			...(await Email.decryptCredentials(email)),
+		};
 
 		return await next({ context: { email } });
 	});

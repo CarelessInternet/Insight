@@ -1,9 +1,8 @@
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { redirect } from '@tanstack/react-router';
-import { createServerFn, useServerFn } from '@tanstack/react-start';
-import { eq } from 'drizzle-orm';
-import { decrypt } from '~/lib/crypto';
-import { database } from '~/lib/database/drizzle';
+import { createServerFn } from '@tanstack/react-start';
+import { and, eq } from 'drizzle-orm';
+import { database } from '~/lib/database/drizzle.server';
 import { emailAccount } from '~/lib/database/schema';
 import type { EmailId } from '~/lib/email';
 import Email from '~/lib/email.server';
@@ -12,36 +11,36 @@ import { inboxMiddleware } from '~/lib/middleware';
 
 const fetchInbox = createServerFn({ method: 'GET' })
 	.middleware([inboxMiddleware])
-	.handler(async ({ context }) => {
-		await using imapEmail = await Email.connect({
-			email: context.email.email,
-			hostname: context.email.hostname,
-			password: await decrypt({ data: context.email.password }),
+	.handler(async ({ context: { email, user } }) => {
+		await using imapEmail = new Email({
+			email: email.email,
+			hostname: email.hostname,
+			password: email.password,
 		});
+		await imapEmail.connect();
 
 		if (!imapEmail.authenticated) {
-			await database.update(emailAccount).set({ status: 'invalid' }).where(eq(emailAccount.id, context.email.id));
+			await database
+				.update(emailAccount)
+				.set({ status: 'invalid' })
+				.where(and(eq(emailAccount.userId, user.id), eq(emailAccount.id, email.id)));
 			throw redirect({ to: '/account/settings' });
 		}
 
 		const messages = await imapEmail.getMailboxMessages('INBOX');
-		logger.info('Fetched messages for inbox:%s for user:%s', context.email.id, context.user.id);
+		logger.info('Fetched messages for inbox:%s by user:%s', email.id, user.id);
 
 		return messages;
 	});
-
-// type Inbox = Awaited<ReturnType<typeof fetchInbox>>;
 
 export const inboxOptions = (id: EmailId) =>
 	queryOptions({
 		queryKey: ['email-inbox', id],
 		queryFn: () => fetchInbox({ data: id }),
-		refetchOnWindowFocus: false,
 	});
 
 export default function Inbox({ id }: { id: EmailId }) {
 	const { data: messages } = useSuspenseQuery(inboxOptions(id));
-	console.log('messages', messages);
 
 	return <p>hiii</p>;
 }

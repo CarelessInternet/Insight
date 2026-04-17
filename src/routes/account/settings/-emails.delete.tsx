@@ -1,9 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
-import { and, eq } from 'drizzle-orm';
-import { Trash, Trash2Icon } from 'lucide-react';
+import { and, eq, inArray } from 'drizzle-orm';
+import { MailMinus, MailX, Trash } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import type DropdownDialog from '~/components/DropdownDialog';
+import z from 'zod';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -14,7 +15,9 @@ import {
 	AlertDialogHeader,
 	AlertDialogMedia,
 	AlertDialogTitle,
+	AlertDialogTrigger,
 } from '~/components/ui/alert-dialog';
+import { Button } from '~/components/ui/button';
 import { Spinner } from '~/components/ui/spinner';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount, emailAccountSelectSchema } from '~/lib/database/schema';
@@ -23,41 +26,40 @@ import logger from '~/lib/logger.server';
 import { sessionMiddleware } from '~/lib/middleware';
 import { type EmailAccount, emailAccountQueryKey } from './-email.table';
 
-const deleteEmailFn = createServerFn({ method: 'POST' })
+const deleteEmailsFn = createServerFn({ method: 'POST' })
 	.middleware([sessionMiddleware])
-	.inputValidator(emailAccountSelectSchema.shape.id)
-	.handler(async ({ context, data: id }) => {
+	.inputValidator(z.array(emailAccountSelectSchema.shape.id))
+	.handler(async ({ context, data: ids }) => {
 		try {
-			const [email] = await database
+			const emails = await database
 				.delete(emailAccount)
-				.where(and(eq(emailAccount.id, id), eq(emailAccount.userId, context.user.id)))
+				.where(and(eq(emailAccount.userId, context.user.id), inArray(emailAccount.id, ids)))
 				.returning();
 
-			if (email) {
-				logger.info('Email:%s account deleted by user:%s', email?.id, email?.userId);
-				return formResponse({ message: 'Successfully deleted the email account!', success: true });
+			if (emails.length > 0) {
+				logger.info(
+					'%s email accounts (%s) deleted by user:%s',
+					emails.length,
+					emails.map((email) => email.id).join(', '),
+					context.user.id,
+				);
+				return formResponse({ message: 'Successfully deleted the email accounts!', success: true });
 			}
 
-			return formResponse({ message: 'The email did not exist on your account.', success: false });
+			return formResponse({ message: 'The emails do not exist on your account.', success: false });
 		} catch (err) {
-			logger.error('Failed to delete email:%s for user:%s\n%s', id, context.user.id, err);
+			logger.error('Failed to delete %s email accounts for user:%s\n%s', ids.length, context.user.id, err);
 			return formResponse({ message: 'There was an internal error.', success: false });
 		}
 	});
 
-export default function EmailDelete(properties: DropdownDialog<EmailAccount, true>) {
-	if (!properties.row) {
-		return null;
-	}
-
-	return <Component {...(properties as unknown as DropdownDialog<EmailAccount>)} />;
-}
-
-function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
+export default function DeleteEmails({ rows }: { rows: EmailAccount[] }) {
 	const queryClient = useQueryClient();
-	const deleteEmail = useServerFn(deleteEmailFn);
+	const deleteEmails = useServerFn(deleteEmailsFn);
+
+	const [open, setOpen] = useState(false);
 	const { isPending, mutate } = useMutation({
-		mutationFn: () => deleteEmail({ data: row.id }),
+		mutationFn: () => deleteEmails({ data: rows.map((data) => data.id) }),
 		onSettled(data) {
 			if (data?.success) {
 				queryClient.invalidateQueries({ queryKey: [emailAccountQueryKey] });
@@ -72,16 +74,19 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 
 	return (
 		<AlertDialog open={open} onOpenChange={setOpen}>
+			<AlertDialogTrigger asChild>
+				<Button variant="destructive">
+					<MailX /> Delete Selected Emails
+				</Button>
+			</AlertDialogTrigger>
 			<AlertDialogContent size="sm">
 				<AlertDialogHeader>
 					<AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
-						<Trash2Icon />
+						<MailMinus />
 					</AlertDialogMedia>
-					<AlertDialogTitle className="inline-block">
-						Delete <p className="inline underline">{row.email}</p>?
-					</AlertDialogTitle>
+					<AlertDialogTitle>Delete {rows.length} emails?</AlertDialogTitle>
 					<AlertDialogDescription>
-						This will permanently delete the email account from your Insight account.
+						This will permanently delete the email accounts from your Insight account.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>

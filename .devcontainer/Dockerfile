@@ -1,4 +1,4 @@
-ARG BUN_MAJOR_VERSION=canary
+ARG BUN_MAJOR_VERSION=1
 
 FROM oven/bun:${BUN_MAJOR_VERSION}-alpine AS base
 

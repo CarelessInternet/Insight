@@ -1,5 +1,5 @@
 import { defineConfig } from 'drizzle-kit';
-import { url } from '~/lib/database/drizzle';
+import { url } from '~/lib/database/drizzle.server';
 
 export default defineConfig({
 	breakpoints: true,
