@@ -13,17 +13,8 @@ export const environment = createEnv({
 		DATABASE_USERNAME: z.string(),
 		DATABASE_PASSWORD: z.string(),
 		// https://github.com/winstonjs/winston?tab=readme-ov-file#logging-levels
-		LOG_LEVEL: z
-			.union([
-				z.literal('error'),
-				z.literal('warn'),
-				z.literal('info'),
-				z.literal('http'),
-				z.literal('verbose'),
-				z.literal('debug'),
-			])
-			.default('http'),
-		NODE_ENV: z.union([z.literal('development'), z.literal('production')]),
+		LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'verbose', 'debug']).default('http'),
+		NODE_ENV: z.enum(['development', 'production']),
 	},
 	// Would use import.meta.env, but Bun loads .env files which overrides Vite's.
 	// BETTER_AUTH_URL would be replaceable with import.meta.env.BASE_URL.

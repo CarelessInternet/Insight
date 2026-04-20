@@ -99,7 +99,7 @@ function RouteComponent() {
 	}, [navigate]);
 
 	return (
-		<div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
+		<main className="flex flex-1 flex-col items-center justify-center gap-6 p-6 md:p-10">
 			<div className="flex w-full max-w-md flex-col gap-6">
 				<a href="/" className="flex items-center gap-2 self-center font-medium text-2xl">
 					<div className="flex size-8 items-center justify-center rounded-md">
@@ -126,7 +126,7 @@ function RouteComponent() {
 								encType="multipart/form-data"
 							>
 								<FieldGroup>
-									{error && <p className="text-destructive text-center">{error}</p>}
+									{error && <p className="text-center text-destructive">{error}</p>}
 									<form.Field name="email">
 										{(field) => {
 											const isInvalid = isInvalidField(field);
@@ -191,6 +191,6 @@ function RouteComponent() {
 					</Card>
 				</div>
 			</div>
-		</div>
+		</main>
 	);
 }

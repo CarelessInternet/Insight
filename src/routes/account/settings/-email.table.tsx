@@ -193,7 +193,17 @@ const columns = [
 		),
 		id: 'Date Added',
 	},
-
+	{
+		accessorKey: 'updatedAt',
+		cell: ({ cell }) => dateAndTime(cell.getValue<ReturnType<typeof extractTimestampFromUUIDv7>>()),
+		header: ({ column }) => (
+			<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+				{column.id}
+				<ArrowUpDown className="ml-2 h-4 w-4" />
+			</Button>
+		),
+		id: 'Last Updated',
+	},
 	{
 		id: 'actions',
 		cell: ({ row, table }) => (
@@ -241,7 +251,7 @@ export default function EmailAccountsTable() {
 
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ ID: false });
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ ID: false, 'Date Added': false });
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
 	const [activeAction, setActiveAction] = useState<RowAction>(null);
@@ -277,8 +287,8 @@ export default function EmailAccountsTable() {
 	});
 
 	return (
-		<div className="flex flex-col gap-2 w-3/4">
-			<div className="flex flex-col sm:flex-row justify-between">
+		<div className="flex w-3/4 flex-col gap-2">
+			<div className="flex flex-col justify-between sm:flex-row">
 				<ButtonGroup>
 					<ButtonGroup className="max-w-full">
 						<InputGroup>
@@ -376,7 +386,7 @@ export default function EmailAccountsTable() {
 							<TableRow>
 								{table.getVisibleLeafColumns().map((column) => (
 									<TableCell key={column.id}>
-										<Skeleton className="w-full h-8" />
+										<Skeleton className="h-8 w-full" />
 									</TableCell>
 								))}
 							</TableRow>
@@ -411,7 +421,7 @@ export default function EmailAccountsTable() {
 				</Table>
 			</div>
 			<div className="flex items-center justify-between space-x-2">
-				<div className="text-sm text-muted-foreground">
+				<div className="text-muted-foreground text-sm">
 					{table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
 					selected.
 				</div>

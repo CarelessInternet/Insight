@@ -20,6 +20,12 @@
 			"recommended": true,
 			"correctness": {
 				"noChildrenProp": "off"
+			},
+			"nursery": {
+				"useSortedClasses": {
+					"fix": "safe",
+					"level": "error"
+				}
 			}
 		}
 	},

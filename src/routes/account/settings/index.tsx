@@ -28,7 +28,7 @@ function RouteComponent() {
 	const passkeys = Route.useLoaderData();
 
 	return (
-		<div className="space-y-2 ml-2">
+		<div className="ml-2 space-y-2">
 			<Passkey passkeys={passkeys} />
 			<Suspense
 				fallback={
@@ -37,7 +37,7 @@ function RouteComponent() {
 							{Array.from({ length: 5 }, () => (
 								<TableRow key={crypto.randomUUID()}>
 									<TableCell>
-										<Skeleton className="w-full h-8" />
+										<Skeleton className="h-8 w-full" />
 									</TableCell>
 								</TableRow>
 							))}

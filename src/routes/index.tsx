@@ -1,5 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
-import ModeToggle from '~/components/toggle';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { getSession } from '~/lib/middleware';
 
 export const Route = createFileRoute('/')({
@@ -13,7 +12,7 @@ function Home() {
 	return (
 		<>
 			User: {state?.user?.email ?? 'None.'}
-			<ModeToggle />
+			<Link to="/account/settings">Settings</Link>
 		</>
 	);
 }

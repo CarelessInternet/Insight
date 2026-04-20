@@ -42,7 +42,7 @@ import { type EmailAccount, emailAccountQueryKey } from './-email.table';
 const emailSchema = createSelectSchema(emailAccount, {
 	hostname: z.hostname().nonempty(),
 	email: z.email().nonempty(),
-}).omit({ emailLookup: true, status: true, userId: true });
+}).pick({ email: true, hostname: true, id: true, password: true });
 
 type EmailSchema = z.infer<typeof emailSchema>;
 

@@ -107,6 +107,9 @@ export const emailAccount = pgTable(
 		emailLookup: text('email_lookup').notNull(),
 		password: text('password').notNull(),
 		status: statusEnum().notNull(),
+		updatedAt: timestamp('updated_at')
+			.$onUpdate(() => new Date())
+			.notNull(),
 	},
 	(table) => [
 		index('emailAccount_userId_idx').on(table.userId),

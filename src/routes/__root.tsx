@@ -1,12 +1,11 @@
-/// <reference types="vite/client" />
-
 import { createRootRoute, HeadContent, Outlet, ScriptOnce, Scripts } from '@tanstack/react-router';
 import { createMiddleware } from '@tanstack/react-start';
-import type { PropsWithChildren } from 'react';
-import { ThemeProvider, useTheme } from '~/components/theme-provider';
+import { AppearanceProvider } from '~/components/appearance-provider';
+import Header from '~/components/header';
 import { Toaster } from '~/components/ui/sonner';
+import { getAppearanceServerFn } from '~/lib/appearance';
 import logger from '~/lib/logger.server';
-import { getThemeServerFn } from '~/lib/theme';
+import { getSession } from '~/lib/middleware';
 import appCss from '../styles/app.css?url';
 
 const loggingRequestMiddleware = createMiddleware({ type: 'request' }).server(async ({ next }) => {
@@ -35,49 +34,42 @@ export const Route = createRootRoute({
 			{ rel: 'icon', type: 'image/png', href: '/insight.png' },
 		],
 	}),
+	beforeLoad: async () => await getSession(),
 	component: RootComponent,
-	loader: () => getThemeServerFn(),
+	loader: () => getAppearanceServerFn(),
 	server: {
 		middleware: [loggingRequestMiddleware],
 	},
 });
 
 function RootComponent() {
-	const theme = Route.useLoaderData();
+	const session = Route.useRouteContext();
+	const appearance = Route.useLoaderData();
+	const themeClass = appearance.theme === 'dark' ? 'dark' : '';
 
 	return (
-		<ThemeProvider theme={theme}>
-			<RootDocument>
-				<Outlet />
-			</RootDocument>
-		</ThemeProvider>
-	);
-}
-
-function RootDocument({ children }: PropsWithChildren) {
-	const { theme } = useTheme();
-	const themeClass = theme === 'dark' ? 'dark' : '';
-
-	return (
-		<html className={themeClass} lang="en" suppressHydrationWarning>
-			<head>
-				{theme === 'system' && (
-					<ScriptOnce>
-						{`
-              if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                document.documentElement.classList.add('dark');
-              }
-            `}
-					</ScriptOnce>
-				)}
-				<HeadContent />
-			</head>
-			<body>
-				{children}
-				{/* pointer-events-auto allows toasts to be dismissed with a dialog open (see sonner.tsx). */}
-				<Toaster richColors className="pointer-events-auto" />
-				<Scripts />
-			</body>
-		</html>
+		<AppearanceProvider appearance={appearance}>
+			<html className={themeClass} lang="en" suppressHydrationWarning>
+				<head>
+					{appearance.theme === 'system' && (
+						<ScriptOnce>
+							{`
+								if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+									document.documentElement.classList.add('dark');
+								}
+							`}
+						</ScriptOnce>
+					)}
+					<HeadContent />
+				</head>
+				<body className="flex min-h-screen flex-col">
+					<Header session={session} />
+					<Outlet />
+					{/* pointer-events-auto allows toasts to be dismissed with a dialog open (see sonner.tsx). */}
+					<Toaster richColors className="pointer-events-auto" />
+					<Scripts />
+				</body>
+			</html>
+		</AppearanceProvider>
 	);
 }
