@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import z from 'zod';
 import { Button } from '~/components/ui/button';
 import { Spinner } from '~/components/ui/spinner';
-import { decrypt } from '~/lib/crypto.server';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount, emailAccountSelectSchema } from '~/lib/database/schema';
 import Email from '~/lib/email.server';
@@ -30,13 +29,7 @@ const revalidateEmailsFn = createServerFn({ method: 'POST' })
 
 			const revalidatedEmails = await Promise.all(
 				emails.map(async (account) => {
-					const [email, hostname, password] = await Promise.all([
-						decrypt(account.email),
-						decrypt(account.hostname),
-						decrypt(account.password),
-					]);
-
-					await using imapEmail = new Email({ email, hostname, password });
+					await using imapEmail = new Email(await Email.decryptCredentials(account));
 					await imapEmail.connect();
 
 					return {

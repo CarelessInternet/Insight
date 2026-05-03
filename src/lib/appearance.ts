@@ -3,10 +3,9 @@ import { getCookie, setCookie } from '@tanstack/react-start/server';
 import z from 'zod';
 
 const storageKey = 'ui-theme';
-
 const appearance = z.object({
 	theme: z.enum(['light', 'dark', 'system']),
-	palette: z.enum(['default', 'greenery']),
+	palette: z.enum(['default', 'rose', 'orange', 'green', 'sky']),
 });
 
 export type Appearance = z.infer<typeof appearance>;
@@ -22,8 +21,7 @@ export const getAppearanceServerFn = createServerFn({ method: 'GET' }).handler((
 		return defaultAppearance;
 	}
 
-	const parsed = appearance.safeParse(JSON.parse(cookie));
-	return parsed.success ? parsed.data : defaultAppearance;
+	return appearance.safeParse(JSON.parse(cookie)).data ?? defaultAppearance;
 });
 
 export const setAppearanceServerFn = createServerFn({ method: 'POST' })

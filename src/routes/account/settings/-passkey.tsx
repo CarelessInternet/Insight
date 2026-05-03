@@ -1,9 +1,12 @@
-import type { Passkey } from '@better-auth/passkey';
+import { getRouteApi } from '@tanstack/react-router';
 import { useState } from 'react';
 import { Button } from '~/components/ui/button';
 import { authenticationClient } from '~/lib/authentication/client';
 
-export default function PasskeySetting({ passkeys }: { passkeys: Passkey[] }) {
+const Route = getRouteApi('/account/settings/');
+
+export default function PasskeySetting() {
+	const passkeys = Route.useLoaderData();
 	const [disabled, setDisabled] = useState(passkeys.length > 0);
 
 	return (

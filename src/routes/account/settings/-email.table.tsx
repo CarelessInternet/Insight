@@ -1,4 +1,5 @@
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
+import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import {
 	type ColumnDef,
@@ -22,6 +23,7 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Columns3Cog,
+	MailOpen,
 	MailSearch,
 	MailX,
 	MoreHorizontal,
@@ -60,6 +62,8 @@ import EmailEdit from './-email.edit';
 import DeleteEmails from './-emails.delete';
 import RevalidateEmails from './-emails.revalidate';
 
+const Route = getRouteApi('/account/settings/');
+
 const fetchEmailAccounts = createServerFn({ method: 'GET' })
 	.middleware([sessionMiddleware])
 	.inputValidator(paginatedQuery)
@@ -97,7 +101,7 @@ const fetchEmailAccounts = createServerFn({ method: 'GET' })
 export type EmailAccount = Awaited<ReturnType<typeof fetchEmailAccounts>>['data'][0];
 
 const defaultPagination: PaginationState = { pageIndex: 0, pageSize: 10 };
-export const emailAccountQueryKey = 'email-accounts' as const;
+export const emailAccountQueryKey = 'email-settings-accounts' as const;
 
 export const emailAccountsOptions = ({ pageIndex, pageSize } = defaultPagination) =>
 	queryOptions({
@@ -216,6 +220,12 @@ const columns = [
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
 					<DropdownMenuLabel>Actions</DropdownMenuLabel>
+					<DropdownMenuItem asChild>
+						<Route.Link to="/inbox/$id/$inbox" params={{ id: row.original.id, inbox: 'INBOX' }}>
+							<MailOpen />
+							View Inbox
+						</Route.Link>
+					</DropdownMenuItem>
 					<DropdownMenuItem
 						onSelect={(e) => {
 							e.preventDefault();

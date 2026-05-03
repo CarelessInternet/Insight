@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { getSession } from '~/lib/middleware';
 
 export const Route = createFileRoute('/')({
@@ -10,9 +10,9 @@ function Home() {
 	const state = Route.useRouteContext();
 
 	return (
-		<>
+		<div>
 			User: {state?.user?.email ?? 'None.'}
-			<Link to="/account/settings">Settings</Link>
-		</>
+			<Route.Link to="/account/settings">Settings</Route.Link>
+		</div>
 	);
 }

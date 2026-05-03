@@ -14,9 +14,7 @@ const getUserData = createServerFn({ method: 'GET' })
 	.middleware([sessionMiddleware])
 	.handler(async () => {
 		getQueryClient().ensureQueryData(emailAccountsOptions());
-		const passkeys = await auth.api.listPasskeys({ headers: getRequestHeaders() });
-
-		return passkeys;
+		return await auth.api.listPasskeys({ headers: getRequestHeaders() });
 	});
 
 export const Route = createFileRoute('/account/settings/')({
@@ -25,11 +23,9 @@ export const Route = createFileRoute('/account/settings/')({
 });
 
 function RouteComponent() {
-	const passkeys = Route.useLoaderData();
-
 	return (
 		<div className="ml-2 space-y-2">
-			<Passkey passkeys={passkeys} />
+			<Passkey />
 			<Suspense
 				fallback={
 					<Table>

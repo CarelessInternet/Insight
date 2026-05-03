@@ -35,14 +35,14 @@ export default class Email implements AsyncDisposable {
 	public async connect() {
 		try {
 			await this.client.connect();
-			logger.info('Authenticated to an email client');
+			logger.verbose('Authenticated to an email client');
 		} catch (err) {
 			logger.warn('Failed to authenticate an email client: %s', err);
 		}
 	}
 
 	private async getMailbox(inbox: string) {
-		const lock = await this.client.getMailboxLock(inbox);
+		const lock = await this.client.getMailboxLock(inbox, { readOnly: true });
 
 		return {
 			[Symbol.dispose]() {
@@ -51,8 +51,13 @@ export default class Email implements AsyncDisposable {
 		};
 	}
 
+	public async getMailboxes() {
+		return await this.client.listTree();
+	}
+
 	public async getMailboxMessages(inbox: string) {
 		using _ = await this.getMailbox(inbox);
+		// TODO: Fetching an empty custom mailbox results in an error.
 		return await this.client.fetchAll('1:*', { bodyStructure: true, envelope: true });
 	}
 

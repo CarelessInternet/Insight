@@ -54,7 +54,7 @@ export const decrypt = createServerOnlyFn(async (encrypted: string) => {
 	);
 
 	const decrypted = bytesToUtf8.decode(new Uint8Array(plaintext));
-	logger.verbose('Decrypted an AES-GCM key to a string');
+	logger.debug('Decrypted an AES-GCM key to a string');
 
 	return decrypted;
 });
@@ -78,7 +78,7 @@ export const hash = createServerOnlyFn(async (text: string) => {
 	const hmac = await crypto.subtle.sign(hmacName, hmacKey, bytesToUtf8.encode(data));
 
 	const hashed = hmacEncryptedSchema.parse(`${hmacPrefix}:${base64ToBytes.encode(new Uint8Array(hmac))}`);
-	logger.verbose('Hashed a string to HMAC');
+	logger.debug('Hashed a string to HMAC');
 
 	return hashed;
 });

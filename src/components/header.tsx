@@ -1,7 +1,10 @@
-import { Link, useNavigate } from '@tanstack/react-router';
+import { getRouteApi } from '@tanstack/react-router';
 import { Image } from '@unpic/react';
 import {
 	ChevronDown,
+	Citrus,
+	CloudSun,
+	House,
 	Leaf,
 	LogIn,
 	LogOut,
@@ -17,7 +20,7 @@ import {
 } from 'lucide-react';
 import { authenticationClient } from '~/lib/authentication/client';
 import { useAppearance } from './appearance-provider';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Avatar, AvatarFallback } from './ui/avatar';
 import { Button } from './ui/button';
 import {
 	DropdownMenu,
@@ -39,6 +42,8 @@ import {
 	NavigationMenuList,
 	navigationMenuTriggerStyle,
 } from './ui/navigation-menu';
+
+const Route = getRouteApi('__root__');
 
 function AppearanceDropdown() {
 	const { setPalette, setTheme } = useAppearance();
@@ -80,12 +85,24 @@ function AppearanceDropdown() {
 						<DropdownMenuPortal>
 							<DropdownMenuSubContent>
 								<DropdownMenuItem onClick={() => setPalette('default')}>
-									<Rose />
+									<House />
 									Default
 								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => setPalette('greenery')}>
+								<DropdownMenuItem onClick={() => setPalette('rose')}>
+									<Rose />
+									Rose
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => setPalette('orange')}>
+									<Citrus />
+									Orange
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => setPalette('green')}>
 									<Leaf />
-									Greenery
+									Green
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => setPalette('sky')}>
+									<CloudSun />
+									Sky
 								</DropdownMenuItem>
 							</DropdownMenuSubContent>
 						</DropdownMenuPortal>
@@ -96,11 +113,12 @@ function AppearanceDropdown() {
 	);
 }
 
-export default function Header({ session }: { session: typeof authenticationClient.$Infer.Session | null }) {
-	const navigate = useNavigate();
+export default function Header() {
+	const session = Route.useRouteContext();
+	const navigate = Route.useNavigate();
 
 	return (
-		<header className="flex items-center justify-around border-b py-2">
+		<header className="flex h-(--header-height) shrink-0 items-center justify-around border-b py-2">
 			<div className="flex flex-row items-center gap-2">
 				<Image src="/insight.png" width={32} height={32} alt="Insight logo" />
 				Insight
@@ -109,7 +127,7 @@ export default function Header({ session }: { session: typeof authenticationClie
 				<NavigationMenuList>
 					<NavigationMenuItem>
 						<NavigationMenuLink className={navigationMenuTriggerStyle()} asChild>
-							<Link to="/inbox">Inbox</Link>
+							<Route.Link to="/inbox">Inbox</Route.Link>
 						</NavigationMenuLink>
 					</NavigationMenuItem>
 				</NavigationMenuList>
@@ -119,7 +137,6 @@ export default function Header({ session }: { session: typeof authenticationClie
 					<DropdownMenuTrigger asChild>
 						<Button variant="ghost">
 							<Avatar>
-								<AvatarImage src={session.user.id} />
 								<AvatarFallback>{session.user.name.charAt(0)}</AvatarFallback>
 							</Avatar>
 							{session.user.name}
@@ -130,10 +147,10 @@ export default function Header({ session }: { session: typeof authenticationClie
 						<DropdownMenuGroup>
 							<DropdownMenuLabel>My Account</DropdownMenuLabel>
 							<DropdownMenuItem asChild>
-								<Link to="/account/settings">
+								<Route.Link to="/account/settings">
 									<Settings />
 									Settings
-								</Link>
+								</Route.Link>
 							</DropdownMenuItem>
 							<AppearanceDropdown />
 						</DropdownMenuGroup>
@@ -166,10 +183,10 @@ export default function Header({ session }: { session: typeof authenticationClie
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem asChild>
-							<Link to="/auth/sign-in">
+							<Route.Link to="/auth/sign-in">
 								<LogIn />
 								Sign In
-							</Link>
+							</Route.Link>
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>

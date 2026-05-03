@@ -1,6 +1,7 @@
 import { redirect } from '@tanstack/react-router';
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { getRequestHeaders } from '@tanstack/react-start/server';
+import z from 'zod';
 import { auth } from './authentication/server';
 import { database } from './database/drizzle.server';
 import { emailAccountSelectSchema } from './database/schema';
@@ -26,25 +27,29 @@ export const sessionMiddleware = createMiddleware({ type: 'function' }).server(
 	async ({ next }) => await next({ context: await ensureSession() }),
 );
 
-export const inboxMiddleware = createMiddleware({ type: 'function' })
-	.middleware([sessionMiddleware])
-	.inputValidator(emailAccountSelectSchema.shape.id)
-	.server(async ({ context, data: id, next }) => {
-		let email = await database.query.emailAccount.findFirst({
-			where: (field, { and, eq }) =>
-				and(eq(field.userId, context.user.id), eq(field.id, id), eq(field.status, 'valid')),
+export const emailMiddlewareSchema = z.object({ id: emailAccountSelectSchema.shape.id, inbox: z.string() });
+export type EmailMiddlewareSchema = z.infer<typeof emailMiddlewareSchema>;
+
+export function emailMiddleware({ decrypt }: { decrypt: boolean }) {
+	return createMiddleware({ type: 'function' })
+		.middleware([sessionMiddleware])
+		.inputValidator(emailMiddlewareSchema)
+		.server(async ({ context, data, next }) => {
+			let email = await database.query.emailAccount.findFirst({
+				where: (field, { and, eq }) =>
+					and(eq(field.userId, context.user.id), eq(field.id, data.id), eq(field.status, 'valid')),
+			});
+
+			if (!email) {
+				logger.warn('The email:%s could not be found or is invalid', data.id);
+				throw redirect({ to: '/account/settings' });
+			}
+
+			email = {
+				...email,
+				...(decrypt && (await Email.decryptCredentials(email))),
+			};
+
+			return await next({ context: { email } });
 		});
-
-		if (!email) {
-			logger.warn('The email:%s could not be found or is invalid', id);
-			// Redirecting is broken...
-			throw redirect({ to: '/account/settings' });
-		}
-
-		email = {
-			...email,
-			...(await Email.decryptCredentials(email)),
-		};
-
-		return await next({ context: { email } });
-	});
+}

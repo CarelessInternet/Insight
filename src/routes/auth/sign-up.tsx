@@ -1,6 +1,6 @@
 import { mergeForm, useForm } from '@tanstack/react-form';
 import { createServerValidate, ServerValidateError, useTransform } from '@tanstack/react-form-start';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { Image } from '@unpic/react';
 import { UserPlus } from 'lucide-react';
@@ -60,7 +60,7 @@ function RouteComponent() {
 	// biome-ignore lint/style/noNonNullAssertion: useRef.
 	const ref = useRef<HTMLFormElement>(null!);
 	const [error, setError] = useState('');
-	const navigate = useNavigate();
+	const navigate = Route.useNavigate();
 	const form = useForm({
 		...signUpOptions,
 		validators: {

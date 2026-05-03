@@ -43,13 +43,12 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-	const session = Route.useRouteContext();
 	const appearance = Route.useLoaderData();
 	const themeClass = appearance.theme === 'dark' ? 'dark' : '';
 
 	return (
 		<AppearanceProvider appearance={appearance}>
-			<html className={themeClass} lang="en" suppressHydrationWarning>
+			<html lang="en" className={themeClass} data-palette={appearance.palette} suppressHydrationWarning>
 				<head>
 					{appearance.theme === 'system' && (
 						<ScriptOnce>
@@ -63,8 +62,10 @@ function RootComponent() {
 					<HeadContent />
 				</head>
 				<body className="flex min-h-screen flex-col">
-					<Header session={session} />
-					<Outlet />
+					<Header />
+					<div className="contents min-h-full flex-1">
+						<Outlet />
+					</div>
 					{/* pointer-events-auto allows toasts to be dismissed with a dialog open (see sonner.tsx). */}
 					<Toaster richColors className="pointer-events-auto" />
 					<Scripts />
