@@ -3,7 +3,7 @@
 
 import { createServerOnlyFn } from '@tanstack/react-start';
 import z from 'zod';
-import { aesPrefix, hmacPrefix } from './database/schema';
+import { aesPrefix, hmacPrefix, type user } from './database/schema';
 import { environment } from './environment.server';
 import logger from './logger.server';
 
@@ -81,4 +81,92 @@ export const hash = createServerOnlyFn(async (text: string) => {
 	logger.debug('Hashed a string to HMAC');
 
 	return hashed;
+});
+
+export interface PasskeyContextPayload {
+	username: typeof user.$inferSelect.name;
+	email: typeof user.$inferSelect.email;
+	nonce: string;
+	/**
+	 * The expiration is in milliseconds.
+	 */
+	expiration: number;
+}
+
+interface PasskeyContext {
+	payload: PasskeyContextPayload;
+	token: string;
+}
+
+const passkeyContextRootKey = await crypto.subtle.importKey(
+	'raw',
+	bytesToUtf8.encode(environment.BETTER_AUTH_SECRET),
+	'HKDF',
+	false,
+	['deriveKey'],
+);
+const derivedPasskeyContextKey = await crypto.subtle.deriveKey(
+	{
+		name: 'HKDF',
+		hash: 'SHA-256',
+		salt: bytesToUtf8.encode('insight-passkey-context-salt'),
+		info: bytesToUtf8.encode('passkey-context'),
+	},
+	passkeyContextRootKey,
+	{ name: hmacName, hash: 'SHA-256' },
+	false,
+	['sign', 'verify'],
+);
+
+const passkeyContextSchema = z.stringFormat('passkey-context-data', (value) => {
+	const [body, signature] = value.split('.');
+
+	return z.base64().safeParse(body).success && z.base64().safeParse(signature).success;
+});
+
+/**
+ * The TTL is in seconds.
+ */
+export const passkeyContextPayloadTTL = 10 * 60;
+
+export const createPasskeyContext = createServerOnlyFn(
+	async (context: Pick<PasskeyContextPayload, 'email' | 'username'>) => {
+		const payload = {
+			...context,
+			expiration: Date.now() + passkeyContextPayloadTTL * 1000,
+			nonce: crypto.randomUUID(),
+		} satisfies PasskeyContextPayload;
+
+		const body = base64ToBytes.encode(bytesToUtf8.encode(JSON.stringify(payload)));
+		const signature = await crypto.subtle.sign(hmacName, derivedPasskeyContextKey, bytesToUtf8.encode(body));
+
+		return {
+			payload,
+			token: passkeyContextSchema.parse(`${body}.${base64ToBytes.encode(new Uint8Array(signature))}`),
+		} satisfies PasskeyContext;
+	},
+);
+
+export const verifyPasskeyContext = createServerOnlyFn(async (token: PasskeyContext['token']) => {
+	const data = passkeyContextSchema.parse(token);
+	const [body, signature] = data.split('.');
+
+	const ok = await crypto.subtle.verify(
+		hmacName,
+		derivedPasskeyContextKey,
+		base64ToBytes.decode(signature as string),
+		bytesToUtf8.encode(body as string),
+	);
+
+	if (!ok) {
+		throw new Error('Invalid context token signature.');
+	}
+
+	const payload = JSON.parse(bytesToUtf8.decode(base64ToBytes.decode(body as string))) as PasskeyContextPayload;
+
+	if (payload.expiration < Date.now()) {
+		throw new Error('Context token expired.');
+	}
+
+	return payload;
 });

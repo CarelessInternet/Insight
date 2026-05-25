@@ -1,7 +1,7 @@
 import { getRouteApi } from '@tanstack/react-router';
 import { useState } from 'react';
 import { Button } from '~/components/ui/button';
-import { authenticationClient } from '~/lib/authentication/client';
+import authClient from '~/lib/authentication/client';
 
 const Route = getRouteApi('/account/settings/');
 
@@ -12,7 +12,7 @@ export default function PasskeySetting() {
 	return (
 		<Button
 			onClick={async () => {
-				const { error } = await authenticationClient.passkey.addPasskey({
+				const { error } = await authClient.passkey.addPasskey({
 					name: 'Insight Passkey',
 					authenticatorAttachment: 'cross-platform',
 				});

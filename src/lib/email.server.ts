@@ -55,10 +55,16 @@ export default class Email implements AsyncDisposable {
 		return await this.client.listTree();
 	}
 
-	public async getMailboxMessages(inbox: string) {
+	public async getPaginatedMailboxMessages(inbox: string) {
 		using _ = await this.getMailbox(inbox);
-		// TODO: Fetching an empty custom mailbox results in an error.
-		return await this.client.fetchAll('1:*', { bodyStructure: true, envelope: true });
+		const amount = (this.client.mailbox || null)?.exists ?? 0;
+
+		if (amount === 0) {
+			return [];
+		}
+
+		const start = Math.max(1, amount - 9);
+		return await this.client.fetchAll(`${start}:*`, { envelope: true, flags: true });
 	}
 
 	async [Symbol.asyncDispose]() {

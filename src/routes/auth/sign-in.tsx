@@ -1,188 +1,79 @@
-import { mergeForm, useForm } from '@tanstack/react-form';
-import { createServerValidate, ServerValidateError, useTransform } from '@tanstack/react-form-start';
+import { useForm } from '@tanstack/react-form';
 import { createFileRoute } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
 import { Image } from '@unpic/react';
-import { LogIn } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import z from 'zod';
+import { UserKey } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
-import { Input } from '~/components/ui/input';
+import { Field, FieldDescription, FieldGroup } from '~/components/ui/field';
 import { Spinner } from '~/components/ui/spinner';
-import { authenticationClient } from '~/lib/authentication/client';
-import { auth } from '~/lib/authentication/server';
-import { formResponse, getFormDataFromServer, isFormResponse, isInvalidField, listeners } from '~/lib/forms';
-import logger from '~/lib/logger.server';
-import { signInOptions, signInSchema } from './-form';
+import authClient from '~/lib/authentication/client';
 
 export const Route = createFileRoute('/auth/sign-in')({
 	component: RouteComponent,
-	loader: async () => await getFormDataFromServer(),
 });
-
-const serverValidate = createServerValidate({
-	...signInOptions,
-	onServerValidate: signInSchema,
-});
-
-export const handleForm = createServerFn({ method: 'POST' })
-	.inputValidator(z.instanceof(FormData))
-	.handler(async (ctx) => {
-		try {
-			const data = (await serverValidate(ctx.data)) as z.infer<typeof signInSchema>;
-			const { user } = await auth.api.signInEmail({
-				body: {
-					email: data.email,
-					password: data.password,
-					rememberMe: true,
-				},
-			});
-
-			logger.info('Signed in user:%s via email and password', user.id);
-			return formResponse({ message: 'Successfully signed in!', success: true });
-		} catch (err) {
-			if (err instanceof ServerValidateError) {
-				return err.response;
-			}
-
-			logger.error('Internal error while signing in: %s', err);
-			return formResponse({
-				message: err instanceof Error ? err.message : 'There was an internal error.',
-				success: false,
-			});
-		}
-	});
 
 function RouteComponent() {
-	const state = Route.useLoaderData();
-	// biome-ignore lint/style/noNonNullAssertion: useRef.
-	const ref = useRef<HTMLFormElement>(null!);
-	const [error, setError] = useState('');
+	const [error, setError] = useState<string | null>(null);
 	const navigate = Route.useNavigate();
-	const form = useForm({
-		...signInOptions,
-		validators: {
-			onSubmit: signInSchema,
-			onChange: signInSchema,
-		},
-		listeners,
-		transform: useTransform((baseForm) => mergeForm(baseForm, state), [state]),
-		onSubmit: async () => {
-			const data = new FormData(ref.current);
-			const response = await handleForm({ data });
 
-			if (isFormResponse(response)) {
-				if (response.success) {
-					navigate({ to: '/inbox' });
-				} else {
-					setError(response.message);
-				}
+	const form = useForm({
+		onSubmit: async () => {
+			setError(null);
+
+			const hasPasskeyFunctionality = await PublicKeyCredential.isConditionalMediationAvailable?.();
+
+			if (!hasPasskeyFunctionality) {
+				return setError('Passkey functionality is missing.');
+			}
+
+			const { error } = await authClient.signIn.passkey();
+
+			if (error) {
+				setError(error.message ?? error.statusText);
+			} else {
+				navigate({ to: '/inbox' });
 			}
 		},
 	});
-
-	useEffect(() => {
-		if (!PublicKeyCredential.isConditionalMediationAvailable?.()) {
-			return;
-		}
-
-		void authenticationClient.signIn.passkey({
-			autoFill: true,
-			fetchOptions: {
-				onSuccess() {
-					navigate({ to: '/account/settings' });
-				},
-			},
-		});
-	}, [navigate]);
 
 	return (
 		<main className="flex flex-1 flex-col items-center justify-center gap-6 p-6 md:p-10">
 			<div className="flex w-full max-w-md flex-col gap-6">
-				<a href="/" className="flex items-center gap-2 self-center font-medium text-2xl">
+				<Route.Link to="/" className="flex items-center gap-2 self-center font-medium text-2xl">
 					<div className="flex size-8 items-center justify-center rounded-md">
 						<Image src="/insight.png" width={32} height={32} alt="Insight logo" />
 					</div>
 					Insight
-				</a>
+				</Route.Link>
 				<div className="flex flex-col gap-6">
-					<Card>
+					<Card className="min-h-48">
 						<CardHeader className="text-center">
-							<CardTitle className="text-xl">Sign In to Insight</CardTitle>
-							<CardDescription>Enter your details below to log in to your account.</CardDescription>
+							<CardTitle className="text-xl">Authenticate to Insight</CardTitle>
+							<CardDescription>Click the button below to sign in.</CardDescription>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="flex flex-1 items-center">
 							<form
-								ref={ref}
-								action={handleForm.url}
 								onSubmit={(e) => {
 									e.preventDefault();
 									e.stopPropagation();
 									form.handleSubmit();
 								}}
-								method="post"
-								encType="multipart/form-data"
+								className="contents"
 							>
 								<FieldGroup>
-									{error && <p className="text-center text-destructive">{error}</p>}
-									<form.Field name="email">
-										{(field) => {
-											const isInvalid = isInvalidField(field);
-
-											return (
-												<Field data-invalid={isInvalid}>
-													<FieldLabel htmlFor={field.name}>Email</FieldLabel>
-													<Input
-														id={field.name}
-														type="email"
-														name={field.name}
-														value={field.state.value}
-														onBlur={field.handleBlur}
-														onChange={(e) => field.handleChange(e.target.value)}
-														aria-invalid={isInvalid}
-														autoComplete="email webauthn"
-														placeholder="john@doe.com"
-													/>
-													{isInvalid && <FieldError errors={field.state.meta.errors} />}
-												</Field>
-											);
-										}}
-									</form.Field>
-									<form.Field name="password">
-										{(field) => {
-											const isInvalid = isInvalidField(field);
-
-											return (
-												<Field data-invalid={isInvalid}>
-													<FieldLabel htmlFor={field.name}>Password</FieldLabel>
-													<Input
-														id={field.name}
-														type="password"
-														name={field.name}
-														value={field.state.value}
-														onBlur={field.handleBlur}
-														onChange={(e) => field.handleChange(e.target.value)}
-														aria-invalid={isInvalid}
-														autoComplete="current-password webauthn"
-													/>
-													{isInvalid && <FieldError errors={field.state.meta.errors} />}
-												</Field>
-											);
-										}}
-									</form.Field>
+									{error && <p className="text-center font-bold text-destructive">{error}</p>}
 									<Field>
 										<form.Subscribe selector={(formState) => [formState.canSubmit, formState.isSubmitting]}>
 											{([canSubmit, isSubmitting]) => (
 												<Button type="submit" disabled={!canSubmit} aria-disabled={!canSubmit}>
-													{isSubmitting ? <Spinner /> : <LogIn />}
-													Sign In
+													{isSubmitting ? <Spinner /> : <UserKey />}
+													Sign In with Passkey
 												</Button>
 											)}
 										</form.Subscribe>
 										<FieldDescription className="text-center">
-											Don't have an account? <a href="/auth/sign-up">Sign Up</a>
+											Don't have an account? <Route.Link to="/auth/sign-up">Sign Up</Route.Link>
 										</FieldDescription>
 									</Field>
 								</FieldGroup>

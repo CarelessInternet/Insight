@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as InboxIndexRouteImport } from './routes/inbox/index'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
+import { Route as InboxIdRouteRouteImport } from './routes/inbox/$id/route'
 import { Route as AccountSettingsIndexRouteImport } from './routes/account/settings/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as InboxIdInboxIndexRouteImport } from './routes/inbox/$id/$inbox/index'
@@ -37,6 +38,11 @@ const AuthSignInRoute = AuthSignInRouteImport.update({
   path: '/auth/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InboxIdRouteRoute = InboxIdRouteRouteImport.update({
+  id: '/inbox/$id',
+  path: '/inbox/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountSettingsIndexRoute = AccountSettingsIndexRouteImport.update({
   id: '/account/settings/',
   path: '/account/settings/',
@@ -48,13 +54,14 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const InboxIdInboxIndexRoute = InboxIdInboxIndexRouteImport.update({
-  id: '/inbox/$id/$inbox/',
-  path: '/inbox/$id/$inbox/',
-  getParentRoute: () => rootRouteImport,
+  id: '/$inbox/',
+  path: '/$inbox/',
+  getParentRoute: () => InboxIdRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/inbox/$id': typeof InboxIdRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/inbox/': typeof InboxIndexRoute
@@ -64,6 +71,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/inbox/$id': typeof InboxIdRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/inbox': typeof InboxIndexRoute
@@ -74,6 +82,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/inbox/$id': typeof InboxIdRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/inbox/': typeof InboxIndexRoute
@@ -85,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/inbox/$id'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/inbox/'
@@ -94,6 +104,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/inbox/$id'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/inbox'
@@ -103,6 +114,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/inbox/$id'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/inbox/'
@@ -113,12 +125,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  InboxIdRouteRoute: typeof InboxIdRouteRouteWithChildren
   AuthSignInRoute: typeof AuthSignInRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
   InboxIndexRoute: typeof InboxIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   AccountSettingsIndexRoute: typeof AccountSettingsIndexRoute
-  InboxIdInboxIndexRoute: typeof InboxIdInboxIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -151,6 +163,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/inbox/$id': {
+      id: '/inbox/$id'
+      path: '/inbox/$id'
+      fullPath: '/inbox/$id'
+      preLoaderRoute: typeof InboxIdRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account/settings/': {
       id: '/account/settings/'
       path: '/account/settings'
@@ -167,22 +186,34 @@ declare module '@tanstack/react-router' {
     }
     '/inbox/$id/$inbox/': {
       id: '/inbox/$id/$inbox/'
-      path: '/inbox/$id/$inbox'
+      path: '/$inbox'
       fullPath: '/inbox/$id/$inbox/'
       preLoaderRoute: typeof InboxIdInboxIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof InboxIdRouteRoute
     }
   }
 }
 
+interface InboxIdRouteRouteChildren {
+  InboxIdInboxIndexRoute: typeof InboxIdInboxIndexRoute
+}
+
+const InboxIdRouteRouteChildren: InboxIdRouteRouteChildren = {
+  InboxIdInboxIndexRoute: InboxIdInboxIndexRoute,
+}
+
+const InboxIdRouteRouteWithChildren = InboxIdRouteRoute._addFileChildren(
+  InboxIdRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  InboxIdRouteRoute: InboxIdRouteRouteWithChildren,
   AuthSignInRoute: AuthSignInRoute,
   AuthSignUpRoute: AuthSignUpRoute,
   InboxIndexRoute: InboxIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   AccountSettingsIndexRoute: AccountSettingsIndexRoute,
-  InboxIdInboxIndexRoute: InboxIdInboxIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,13 +1,13 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { getSession } from '~/lib/middleware';
+import { createFileRoute, getRouteApi } from '@tanstack/react-router';
+
+const root = getRouteApi('__root__');
 
 export const Route = createFileRoute('/')({
-	beforeLoad: async () => await getSession(),
 	component: Home,
 });
 
 function Home() {
-	const state = Route.useRouteContext();
+	const state = root.useRouteContext();
 
 	return (
 		<div>

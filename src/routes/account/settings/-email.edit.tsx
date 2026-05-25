@@ -42,7 +42,7 @@ import { type EmailAccount, emailAccountQueryKey } from './-email.table';
 const emailSchema = createSelectSchema(emailAccount, {
 	hostname: z.hostname().nonempty(),
 	email: z.email().nonempty(),
-}).pick({ email: true, hostname: true, id: true, password: true });
+}).pick({ email: true, hostname: true, id: true, label: true, password: true });
 
 type EmailSchema = z.infer<typeof emailSchema>;
 
@@ -51,10 +51,10 @@ const serverValidate = createServerValidate({ onServerValidate: emailSchema });
 const handleForm = createServerFn({ method: 'POST' })
 	.middleware([sessionMiddleware])
 	.inputValidator(z.instanceof(FormData))
-	.handler(async (ctx) => {
+	.handler(async ({ context, data: formData }) => {
 		try {
-			const data = (await serverValidate(ctx.data)) as EmailSchema;
-			const userId = ctx.context.user.id;
+			const data = (await serverValidate(formData)) as EmailSchema;
+			const userId = context.user.id;
 			const currentEmail = await database.query.emailAccount.findFirst({
 				where: (field, { and, eq }) => and(eq(field.id, data.id), eq(field.userId, userId)),
 			});
@@ -84,6 +84,7 @@ const handleForm = createServerFn({ method: 'POST' })
 					email: await encrypt(data.email),
 					emailLookup: await hash(data.email),
 					hostname: await encrypt(data.hostname),
+					label: data.label,
 					password: data.password ? await encrypt(data.password) : currentEmail.password,
 					status: 'valid',
 				})
@@ -120,6 +121,7 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 			id: row.id,
 			email: row.email,
 			hostname: row.hostname,
+			label: row.label,
 			password: '',
 		} satisfies EmailSchema,
 		validators: {
@@ -155,9 +157,10 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 				id: row.id,
 				email: row.email,
 				hostname: row.hostname,
+				label: row.label,
 				password: '',
 			}),
-		[form.reset, row.id, row.email, row.hostname],
+		[form.reset, row.id, row.email, row.hostname, row.label],
 	);
 
 	return (
@@ -189,13 +192,37 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 						<form.Field name="id">
 							{(field) => <Input id={field.name} type="hidden" name={field.name} value={field.state.value} />}
 						</form.Field>
+						<form.Field name="label">
+							{(field) => {
+								const isInvalid = isInvalidField(field);
+
+								return (
+									<Field data-invalid={isInvalid}>
+										<FieldLabel htmlFor={field.name}>Label</FieldLabel>
+										<Input
+											id={field.name}
+											type="text"
+											name={field.name}
+											value={field.state.value ?? ''}
+											onBlur={field.handleBlur}
+											onChange={(e) => field.handleChange(e.target.value)}
+											aria-invalid={isInvalid}
+											placeholder="My Email Account"
+										/>
+										{isInvalid && <FieldError errors={field.state.meta.errors} />}
+									</Field>
+								);
+							}}
+						</form.Field>
 						<form.Field name="hostname">
 							{(field) => {
 								const isInvalid = isInvalidField(field);
 
 								return (
 									<Field data-invalid={isInvalid}>
-										<FieldLabel htmlFor={field.name}>Hostname</FieldLabel>
+										<FieldLabel htmlFor={field.name}>
+											Hostname <span className="text-destructive">*</span>
+										</FieldLabel>
 										<Input
 											id={field.name}
 											type="text"
@@ -217,7 +244,9 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 
 								return (
 									<Field data-invalid={isInvalid}>
-										<FieldLabel htmlFor={field.name}>Email Address</FieldLabel>
+										<FieldLabel htmlFor={field.name}>
+											Email Address <span className="text-destructive">*</span>
+										</FieldLabel>
 										<Input
 											id={field.name}
 											type="email"

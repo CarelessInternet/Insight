@@ -11,14 +11,15 @@ import {
 	MonitorCog,
 	Moon,
 	Paintbrush,
-	Palette,
+	Palette as PaletteIcon,
 	Rose,
 	Settings,
 	Sun,
 	SunMoon,
 	User,
 } from 'lucide-react';
-import { authenticationClient } from '~/lib/authentication/client';
+import type { Palette, Theme } from '~/lib/appearance';
+import authClient from '~/lib/authentication/client';
 import { useAppearance } from './appearance-provider';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Button } from './ui/button';
@@ -29,6 +30,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuPortal,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
@@ -46,12 +49,12 @@ import {
 const Route = getRouteApi('__root__');
 
 function AppearanceDropdown() {
-	const { setPalette, setTheme } = useAppearance();
+	const { palette, setPalette, setTheme, theme } = useAppearance();
 
 	return (
 		<DropdownMenuSub>
 			<DropdownMenuSubTrigger>
-				<Palette />
+				<PaletteIcon />
 				Appearance
 			</DropdownMenuSubTrigger>
 			<DropdownMenuPortal>
@@ -63,17 +66,19 @@ function AppearanceDropdown() {
 						</DropdownMenuSubTrigger>
 						<DropdownMenuPortal>
 							<DropdownMenuSubContent>
-								<DropdownMenuItem onClick={() => setTheme('dark')}>
-									<Moon />
-									Dark
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => setTheme('light')}>
-									<Sun />
-									Light
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => setTheme('system')}>
-									<MonitorCog /> System
-								</DropdownMenuItem>
+								<DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
+									<DropdownMenuRadioItem value={'dark' satisfies Theme}>
+										<Moon />
+										Dark
+									</DropdownMenuRadioItem>
+									<DropdownMenuRadioItem value={'light' satisfies Theme}>
+										<Sun />
+										Light
+									</DropdownMenuRadioItem>
+									<DropdownMenuRadioItem value={'system' satisfies Theme}>
+										<MonitorCog /> System
+									</DropdownMenuRadioItem>
+								</DropdownMenuRadioGroup>
 							</DropdownMenuSubContent>
 						</DropdownMenuPortal>
 					</DropdownMenuSub>
@@ -84,26 +89,28 @@ function AppearanceDropdown() {
 						</DropdownMenuSubTrigger>
 						<DropdownMenuPortal>
 							<DropdownMenuSubContent>
-								<DropdownMenuItem onClick={() => setPalette('default')}>
-									<House />
-									Default
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => setPalette('rose')}>
-									<Rose />
-									Rose
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => setPalette('orange')}>
-									<Citrus />
-									Orange
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => setPalette('green')}>
-									<Leaf />
-									Green
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => setPalette('sky')}>
-									<CloudSun />
-									Sky
-								</DropdownMenuItem>
+								<DropdownMenuRadioGroup value={palette} onValueChange={(value) => setPalette(value as Palette)}>
+									<DropdownMenuRadioItem value={'default' satisfies Palette}>
+										<House />
+										Default
+									</DropdownMenuRadioItem>
+									<DropdownMenuRadioItem value={'rose' satisfies Palette}>
+										<Rose />
+										Rose
+									</DropdownMenuRadioItem>
+									<DropdownMenuRadioItem value={'orange' satisfies Palette}>
+										<Citrus />
+										Orange
+									</DropdownMenuRadioItem>
+									<DropdownMenuRadioItem value={'green' satisfies Palette}>
+										<Leaf />
+										Green
+									</DropdownMenuRadioItem>
+									<DropdownMenuRadioItem value={'sky' satisfies Palette}>
+										<CloudSun />
+										Sky
+									</DropdownMenuRadioItem>
+								</DropdownMenuRadioGroup>
 							</DropdownMenuSubContent>
 						</DropdownMenuPortal>
 					</DropdownMenuSub>
@@ -114,15 +121,15 @@ function AppearanceDropdown() {
 }
 
 export default function Header() {
-	const session = Route.useRouteContext();
+	const { user } = Route.useRouteContext();
 	const navigate = Route.useNavigate();
 
 	return (
 		<header className="flex h-(--header-height) shrink-0 items-center justify-around border-b py-2">
-			<div className="flex flex-row items-center gap-2">
+			<Route.Link to="/" className="flex flex-row items-center gap-2">
 				<Image src="/insight.png" width={32} height={32} alt="Insight logo" />
 				Insight
-			</div>
+			</Route.Link>
 			<NavigationMenu>
 				<NavigationMenuList>
 					<NavigationMenuItem>
@@ -132,14 +139,14 @@ export default function Header() {
 					</NavigationMenuItem>
 				</NavigationMenuList>
 			</NavigationMenu>
-			{session?.user ? (
+			{user ? (
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<Button variant="ghost">
 							<Avatar>
-								<AvatarFallback>{session.user.name.charAt(0)}</AvatarFallback>
+								<AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
 							</Avatar>
-							{session.user.name}
+							{user.name}
 							<ChevronDown />
 						</Button>
 					</DropdownMenuTrigger>
@@ -157,7 +164,7 @@ export default function Header() {
 						<DropdownMenuSeparator />
 						<DropdownMenuItem
 							variant="destructive"
-							onClick={() => authenticationClient.signOut({ fetchOptions: { onSuccess: () => navigate({ to: '/' }) } })}
+							onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => navigate({ to: '/' }) } })}
 						>
 							<LogOut />
 							Log Out

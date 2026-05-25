@@ -54,7 +54,10 @@ export function AppearanceProvider({ appearance, children }: PropsWithChildren<{
 
 export function useAppearance() {
 	const value = useContext(AppearanceContext);
-	if (!value) throw new Error('useTheme called outside of ThemeProvider!');
+
+	if (!value) {
+		throw new Error('useTheme called outside of ThemeProvider!');
+	}
 
 	return value;
 }

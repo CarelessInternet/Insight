@@ -1,4 +1,8 @@
-import { createMiddleware, createStart } from '@tanstack/react-start';
+import { createCsrfMiddleware, createMiddleware, createStart } from '@tanstack/react-start';
+
+const csrfMiddleware = createCsrfMiddleware({
+	filter: ({ handlerType }) => handlerType === 'serverFn',
+})
 
 const loggingFunctionMiddleware = createMiddleware({ type: 'function' }).server(
 	async ({ method, next, serverFnMeta: { name, filename } }) => {
@@ -11,4 +15,6 @@ const loggingFunctionMiddleware = createMiddleware({ type: 'function' }).server(
 	},
 );
 
-export const startInstance = createStart(() => ({ functionMiddleware: [loggingFunctionMiddleware] }));
+export const startInstance = createStart(() => ({
+	functionMiddleware: [loggingFunctionMiddleware], requestMiddleware: [csrfMiddleware]
+}));

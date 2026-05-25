@@ -144,6 +144,16 @@ const columns = [
 		id: 'ID',
 	},
 	{
+		accessorKey: 'label',
+		header: ({ column }) => (
+			<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+				Label
+				<ArrowUpDown className="ml-2 h-4 w-4" />
+			</Button>
+		),
+		id: 'Label',
+	},
+	{
 		accessorKey: 'email',
 		header: ({ column }) => (
 			<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
@@ -152,6 +162,7 @@ const columns = [
 			</Button>
 		),
 	},
+
 	{
 		accessorKey: 'hostname',
 		header: ({ column }) => (
@@ -261,7 +272,11 @@ export default function EmailAccountsTable() {
 
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ ID: false, 'Date Added': false });
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+		ID: false,
+		Label: data.some((email) => !email.label),
+		'Date Added': false,
+	});
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
 	const [activeAction, setActiveAction] = useState<RowAction>(null);
@@ -346,7 +361,7 @@ export default function EmailAccountsTable() {
 					<Field orientation="horizontal" className="w-fit">
 						<FieldLabel htmlFor="select-rows-per-page">Rows per page</FieldLabel>
 						<Select
-							value={`${table.getState().pagination.pageSize}`}
+							value={String(table.getState().pagination.pageSize)}
 							onValueChange={(value) => table.setPageSize(Number(value))}
 						>
 							<SelectTrigger className="w-20" id="select-rows-per-page">
@@ -363,12 +378,13 @@ export default function EmailAccountsTable() {
 							</SelectContent>
 						</Select>
 					</Field>
-					<ButtonGroup aria-label="Pagination button group">
+					<ButtonGroup aria-label="Emails pagination group">
 						<Button variant="outline" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
 							<ChevronLeft />
 						</Button>
 						<Button variant="outline" className="opacity-100!" disabled>
-							Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+							Page {table.getState().pagination.pageIndex + (table.getPageCount() === 0 ? 0 : 1)} of{' '}
+							{table.getPageCount()}
 						</Button>
 						<Button variant="outline" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
 							<ChevronRight />
@@ -405,7 +421,9 @@ export default function EmailAccountsTable() {
 								{table.getRowModel().rows.map((row) => (
 									<TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
 										{row.getVisibleCells().map((cell) => (
-											<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+											<TableCell key={cell.id} suppressHydrationWarning>
+												{flexRender(cell.column.columnDef.cell, cell.getContext())}
+											</TableCell>
 										))}
 									</TableRow>
 								))}

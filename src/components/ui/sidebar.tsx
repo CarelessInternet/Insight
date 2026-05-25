@@ -238,9 +238,9 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
 		<Button
 			data-sidebar="trigger"
 			data-slot="sidebar-trigger"
-			variant="ghost"
-			size="icon-sm"
-			className={cn(className)}
+			variant="outline"
+			size="icon"
+			className={cn('rounded-lg', className)}
 			onClick={(event) => {
 				onClick?.(event);
 				toggleSidebar();
@@ -440,12 +440,12 @@ const sidebarMenuButtonVariants = cva(
 			variant: {
 				default: 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
 				outline:
-					'bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]',
+					'bg-sidebar-primary text-sidebar-primary-foreground shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))] active:bg-sidebar-primary/80 focus:bg-sidebar-primary/80',
 			},
 			size: {
 				default: 'h-9 text-sm',
 				sm: 'h-8 text-xs',
-				lg: 'h-14 px-3 text-sm group-data-[collapsible=icon]:p-0!',
+				lg: 'h-10 px-3 text-lg group-data-[collapsible=icon]:h-10! group-data-[collapsible=icon]:w-8!',
 			},
 		},
 		defaultVariants: {

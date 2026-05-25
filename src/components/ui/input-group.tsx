@@ -7,6 +7,7 @@ import { cn } from '~/lib/utils';
 
 function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
 	return (
+		// biome-ignore lint/a11y/useSemanticElements: Not my problem.
 		<div
 			data-slot="input-group"
 			role="group"
@@ -43,6 +44,8 @@ function InputGroupAddon({
 	...props
 }: React.ComponentProps<'div'> & VariantProps<typeof inputGroupAddonVariants>) {
 	return (
+		// biome-ignore lint/a11y/useSemanticElements: Not my problem.
+		// biome-ignore lint/a11y/useKeyWithClickEvents: Not my problem.
 		<div
 			role="group"
 			data-slot="input-group-addon"

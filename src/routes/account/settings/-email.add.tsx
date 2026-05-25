@@ -23,14 +23,14 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from '~/components/ui/dialog';
-import { Field, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
 import { handleInteractOutside } from '~/components/ui/sonner';
 import { Spinner } from '~/components/ui/spinner';
 import { encrypt, hash } from '~/lib/crypto.server';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount } from '~/lib/database/schema';
-import { type EmailCredentialsSchema, emailCredentialsSchema } from '~/lib/email';
+import { type EmailInsertSchema, emailInsertSchema } from '~/lib/email';
 import Email from '~/lib/email.server';
 import {
 	type FormDataServer,
@@ -46,24 +46,25 @@ import { emailAccountsOptions } from './-email.table';
 
 const accountOptions = formOptions({
 	defaultValues: {
+		label: '',
 		hostname: '',
 		email: '',
 		password: '',
-	} satisfies EmailCredentialsSchema,
+	} satisfies EmailInsertSchema,
 });
 
 const serverValidate = createServerValidate({
 	...accountOptions,
-	onServerValidate: emailCredentialsSchema,
+	onServerValidate: emailInsertSchema,
 });
 
 export const handleForm = createServerFn({ method: 'POST' })
 	.middleware([sessionMiddleware])
 	.inputValidator(z.instanceof(FormData))
-	.handler(async (ctx) => {
+	.handler(async ({ context, data: formData }) => {
 		try {
-			const data = (await serverValidate(ctx.data)) as EmailCredentialsSchema;
-			const userId = ctx.context.user.id;
+			const { label, ...data } = (await serverValidate(formData)) as EmailInsertSchema;
+			const userId = context.user.id;
 			const emailLookup = await hash(data.email);
 			const email = await database.query.emailAccount.findFirst({
 				where: (field, { and, eq }) => and(eq(field.userId, userId), eq(field.emailLookup, emailLookup)),
@@ -87,6 +88,7 @@ export const handleForm = createServerFn({ method: 'POST' })
 				email: await encrypt(data.email),
 				emailLookup: await hash(data.email),
 				hostname: await encrypt(data.hostname),
+				label,
 				password: await encrypt(data.password),
 				status: 'valid',
 				userId,
@@ -113,8 +115,8 @@ export default function AddEmailAccount() {
 	const form = useForm({
 		...accountOptions,
 		validators: {
-			onSubmit: emailCredentialsSchema,
-			onChange: emailCredentialsSchema,
+			onSubmit: emailInsertSchema,
+			onChange: emailInsertSchema,
 		},
 		listeners,
 		transform: useTransform((baseForm) => mergeForm(baseForm, state), [state]),
@@ -163,13 +165,38 @@ export default function AddEmailAccount() {
 						<DialogDescription>Add an email account to your Insight account.</DialogDescription>
 					</DialogHeader>
 					<FieldGroup>
+						<form.Field name="label">
+							{(field) => {
+								const isInvalid = isInvalidField(field);
+
+								return (
+									<Field data-invalid={isInvalid}>
+										<FieldLabel htmlFor={field.name}>Label</FieldLabel>
+										<FieldDescription>You may choose a custom account name.</FieldDescription>
+										<Input
+											id={field.name}
+											type="text"
+											name={field.name}
+											value={field.state.value}
+											onBlur={field.handleBlur}
+											onChange={(e) => field.handleChange(e.target.value)}
+											aria-invalid={isInvalid}
+											placeholder="My Email Account"
+										/>
+										{isInvalid && <FieldError errors={field.state.meta.errors} />}
+									</Field>
+								);
+							}}
+						</form.Field>
 						<form.Field name="hostname">
 							{(field) => {
 								const isInvalid = isInvalidField(field);
 
 								return (
 									<Field data-invalid={isInvalid}>
-										<FieldLabel htmlFor={field.name}>Hostname</FieldLabel>
+										<FieldLabel htmlFor={field.name}>
+											Hostname <span className="text-destructive">*</span>
+										</FieldLabel>
 										<Input
 											id={field.name}
 											type="text"
@@ -179,6 +206,7 @@ export default function AddEmailAccount() {
 											onChange={(e) => field.handleChange(e.target.value)}
 											aria-invalid={isInvalid}
 											placeholder="mail.example.com"
+											required
 										/>
 										{isInvalid && <FieldError errors={field.state.meta.errors} />}
 									</Field>
@@ -191,7 +219,9 @@ export default function AddEmailAccount() {
 
 								return (
 									<Field data-invalid={isInvalid}>
-										<FieldLabel htmlFor={field.name}>Email Address</FieldLabel>
+										<FieldLabel htmlFor={field.name}>
+											Email Address <span className="text-destructive">*</span>
+										</FieldLabel>
 										<Input
 											id={field.name}
 											type="email"
@@ -201,6 +231,7 @@ export default function AddEmailAccount() {
 											onChange={(e) => field.handleChange(e.target.value)}
 											aria-invalid={isInvalid}
 											placeholder="postmaster@example.com"
+											required
 										/>
 										{isInvalid && <FieldError errors={field.state.meta.errors} />}
 									</Field>
@@ -213,7 +244,9 @@ export default function AddEmailAccount() {
 
 								return (
 									<Field data-invalid={isInvalid}>
-										<FieldLabel htmlFor={field.name}>Password</FieldLabel>
+										<FieldLabel htmlFor={field.name}>
+											Password <span className="text-destructive">*</span>
+										</FieldLabel>
 										<Input
 											id={field.name}
 											type="password"
@@ -222,6 +255,7 @@ export default function AddEmailAccount() {
 											onBlur={field.handleBlur}
 											onChange={(e) => field.handleChange(e.target.value)}
 											aria-invalid={isInvalid}
+											required
 										/>
 										{isInvalid && <FieldError errors={field.state.meta.errors} />}
 									</Field>

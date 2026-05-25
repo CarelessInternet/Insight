@@ -1,4 +1,4 @@
-import { createRootRoute, HeadContent, Outlet, ScriptOnce, Scripts } from '@tanstack/react-router';
+import { createRootRouteWithContext, HeadContent, Outlet, ScriptOnce, Scripts } from '@tanstack/react-router';
 import { createMiddleware } from '@tanstack/react-start';
 import { AppearanceProvider } from '~/components/appearance-provider';
 import Header from '~/components/header';
@@ -6,6 +6,7 @@ import { Toaster } from '~/components/ui/sonner';
 import { getAppearanceServerFn } from '~/lib/appearance';
 import logger from '~/lib/logger.server';
 import { getSession } from '~/lib/middleware';
+import type getQueryClient from '~/lib/query';
 import appCss from '../styles/app.css?url';
 
 const loggingRequestMiddleware = createMiddleware({ type: 'request' }).server(async ({ next }) => {
@@ -15,7 +16,11 @@ const loggingRequestMiddleware = createMiddleware({ type: 'request' }).server(as
 	return data;
 });
 
-export const Route = createRootRoute({
+interface RouterContext {
+	queryClient: ReturnType<typeof getQueryClient>;
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
 	head: () => ({
 		meta: [
 			{
@@ -34,7 +39,7 @@ export const Route = createRootRoute({
 			{ rel: 'icon', type: 'image/png', href: '/insight.png' },
 		],
 	}),
-	beforeLoad: async () => await getSession(),
+	beforeLoad: async () => ({ ...(await getSession()) }),
 	component: RootComponent,
 	loader: () => getAppearanceServerFn(),
 	server: {

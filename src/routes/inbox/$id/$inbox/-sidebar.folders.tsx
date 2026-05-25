@@ -9,16 +9,18 @@ import {
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarGroupLabel,
+	SidebarMenu,
+	SidebarMenuBadge,
 	SidebarMenuButton,
+	SidebarMenuItem,
 	SidebarMenuSub,
-	SidebarMenuSubButton,
-	SidebarMenuSubItem,
 } from '~/components/ui/sidebar';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount } from '~/lib/database/schema';
+import type { EmailId } from '~/lib/email';
 import Email from '~/lib/email.server';
 import logger from '~/lib/logger.server';
-import { type EmailMiddlewareSchema, emailMiddleware } from '~/lib/middleware';
+import { emailMiddleware } from '~/lib/middleware';
 
 const Route = getRouteApi('/inbox/$id/$inbox/');
 
@@ -46,39 +48,28 @@ const fetchFolders = createServerFn({ method: 'GET' })
 		return folders;
 	});
 
-export const foldersOptions = ({ id, inbox }: EmailMiddlewareSchema) =>
+export const foldersOptions = (id: EmailId) =>
 	queryOptions({
 		queryKey: ['email-inbox-folders', id],
-		queryFn: () => fetchFolders({ data: { id, inbox } }),
+		queryFn: () => fetchFolders({ data: { id } }),
 		refetchOnWindowFocus: false,
 	});
 
 export default function SidebarFolders() {
-	const parameters = Route.useParams();
-	const { data } = useSuspenseQuery(foldersOptions(parameters));
+	const { id } = Route.useParams();
+	const { data } = useSuspenseQuery(foldersOptions(id));
 
 	return (
-		<Collapsible defaultOpen className="group">
-			<SidebarGroup>
-				<SidebarGroupLabel>Inbox</SidebarGroupLabel>
-				<CollapsibleTrigger asChild>
-					<SidebarMenuButton>
-						<ChevronRight className="transition-transform group-data-[state=open]:rotate-90" />
-						<Folder />
-						Folders
-					</SidebarMenuButton>
-				</CollapsibleTrigger>
-				<CollapsibleContent>
-					<SidebarGroupContent>
-						<SidebarMenuSub>
-							{data.folders?.map((folder) => (
-								<FolderTree key={folder.path} folder={folder} />
-							))}
-						</SidebarMenuSub>
-					</SidebarGroupContent>
-				</CollapsibleContent>
-			</SidebarGroup>
-		</Collapsible>
+		<SidebarGroup>
+			<SidebarGroupLabel>Mailbox</SidebarGroupLabel>
+			<SidebarGroupContent>
+				<SidebarMenu>
+					{data.folders?.map((folder) => (
+						<FolderTree key={folder.path} folder={folder} />
+					))}
+				</SidebarMenu>
+			</SidebarGroupContent>
+		</SidebarGroup>
 	);
 }
 
@@ -90,23 +81,25 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 
 	if ('folders' in folder) {
 		return (
-			<SidebarMenuSubItem>
+			<SidebarMenuItem>
 				<Collapsible
 					defaultOpen={!!folder.path && inbox.includes(folder.path)}
-					className="group [&[data-state=open]>button>svg:first-child]:rotate-90"
+					className="group [&[data-state=open]>button>div>svg:first-child]:rotate-90"
 				>
 					<CollapsibleTrigger asChild>
 						<SidebarMenuButton isActive={isActive}>
-							<ChevronRight className="transition-transform" />
 							<Route.Link to="/inbox/$id/$inbox" params={{ id, inbox: folder.path }} className="contents">
 								{folder.specialUse === '\\Inbox' ? FolderIcon({ specialUse: folder.specialUse }) : <Folder />}
 								{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
 							</Route.Link>
+							<SidebarMenuBadge>
+								<ChevronRight className="transition-transform" />
+							</SidebarMenuBadge>
 						</SidebarMenuButton>
 					</CollapsibleTrigger>
 					<CollapsibleContent>
 						<SidebarGroupContent>
-							<SidebarMenuSub>
+							<SidebarMenuSub className="mr-0 pr-0">
 								{folder.folders?.map((subFolder) => (
 									<FolderTree key={subFolder.path} folder={subFolder} />
 								))}
@@ -114,19 +107,19 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 						</SidebarGroupContent>
 					</CollapsibleContent>
 				</Collapsible>
-			</SidebarMenuSubItem>
+			</SidebarMenuItem>
 		);
 	}
 
 	return (
-		<SidebarMenuSubItem key={folder.path}>
-			<SidebarMenuSubButton className="py-4" isActive={isActive} asChild>
+		<SidebarMenuItem key={folder.path}>
+			<SidebarMenuButton className="py-4.5" isActive={isActive} asChild>
 				<Route.Link to="/inbox/$id/$inbox" params={{ id, inbox: folder.path }}>
 					<FolderIcon specialUse={folder.specialUse} />
 					{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
 				</Route.Link>
-			</SidebarMenuSubButton>
-		</SidebarMenuSubItem>
+			</SidebarMenuButton>
+		</SidebarMenuItem>
 	);
 }
 

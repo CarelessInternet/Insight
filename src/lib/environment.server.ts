@@ -7,11 +7,8 @@ export const environment = createEnv({
 		LOOKUP_SECRET: z.string().min(32),
 		BETTER_AUTH_SECRET: z.string().min(32),
 		BETTER_AUTH_URL: z.url(),
-		DATABASE_HOST: z.string(),
-		DATABASE_PORT: z.coerce.number(),
-		DATABASE_DB: z.string(),
-		DATABASE_USERNAME: z.string(),
-		DATABASE_PASSWORD: z.string(),
+		DATABASE_URL: z.url(),
+		REDIS_URL: z.url().optional(),
 		// https://github.com/winstonjs/winston?tab=readme-ov-file#logging-levels
 		LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'verbose', 'debug']).default('http'),
 		NODE_ENV: z.enum(['development', 'production']),
