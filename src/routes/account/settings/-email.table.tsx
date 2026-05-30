@@ -1,4 +1,4 @@
-import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
+import { type QueryKey, queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import {
@@ -49,6 +49,7 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select';
 import { Skeleton } from '~/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table';
+import type auth from '~/lib/authentication/server';
 import { decrypt } from '~/lib/crypto.server';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount } from '~/lib/database/schema';
@@ -99,14 +100,23 @@ const fetchEmailAccounts = createServerFn({ method: 'GET' })
 	);
 
 export type EmailAccount = Awaited<ReturnType<typeof fetchEmailAccounts>>['data'][0];
+interface EmailAccountsOptions {
+	pagination: PaginationState;
+	userId: typeof auth.$Infer.Session.user.id;
+}
 
-const defaultPagination: PaginationState = { pageIndex: 0, pageSize: 10 };
-export const emailAccountQueryKey = 'email-settings-accounts' as const;
+export const defaultPagination: PaginationState = { pageIndex: 0, pageSize: 10 };
+const emailAccountQueryKey = 'email-settings-accounts' as const;
 
-export const emailAccountsOptions = ({ pageIndex, pageSize } = defaultPagination) =>
+export const invalidateEmailAccountsQueryKey = (userId: EmailAccountsOptions['userId']) => {
+	return [emailAccountQueryKey, { userId } satisfies Partial<EmailAccountsOptions>] satisfies QueryKey;
+};
+
+export const emailAccountsOptions = (parameters: EmailAccountsOptions) =>
 	queryOptions({
-		queryKey: [emailAccountQueryKey, pageIndex, pageSize],
-		queryFn: () => fetchEmailAccounts({ data: { limit: pageSize, offset: pageIndex } }),
+		queryKey: [emailAccountQueryKey, parameters],
+		queryFn: () =>
+			fetchEmailAccounts({ data: { limit: parameters.pagination.pageSize, offset: parameters.pagination.pageIndex } }),
 		refetchOnWindowFocus: false,
 	});
 
@@ -264,10 +274,11 @@ const columns = [
 ] satisfies ColumnDef<EmailAccount>[];
 
 export default function EmailAccountsTable() {
+	const { userId } = Route.useLoaderData();
 	const [pagination, setPagination] = useState(defaultPagination);
 	const {
 		data: { data, rowCount },
-	} = useSuspenseQuery(emailAccountsOptions(pagination));
+	} = useSuspenseQuery(emailAccountsOptions({ pagination, userId }));
 	const [isLoadingData, transitionData] = useTransition();
 
 	const [sorting, setSorting] = useState<SortingState>([]);

@@ -1,4 +1,4 @@
-import { getRouteApi } from '@tanstack/react-router';
+import { getRouteApi, useRouter } from '@tanstack/react-router';
 import { Image } from '@unpic/react';
 import {
 	ChevronDown,
@@ -122,6 +122,7 @@ function AppearanceDropdown() {
 
 export default function Header() {
 	const { user } = Route.useRouteContext();
+	const router = useRouter();
 	const navigate = Route.useNavigate();
 
 	return (
@@ -164,7 +165,12 @@ export default function Header() {
 						<DropdownMenuSeparator />
 						<DropdownMenuItem
 							variant="destructive"
-							onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => navigate({ to: '/' }) } })}
+							onClick={async () => {
+								await authClient.signOut();
+
+								router.invalidate({ filter: (match) => match.routeId === '__root__' });
+								navigate({ to: '/' });
+							}}
 						>
 							<LogOut />
 							Log Out

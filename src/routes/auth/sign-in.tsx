@@ -1,5 +1,5 @@
 import { useForm } from '@tanstack/react-form';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { Image } from '@unpic/react';
 import { UserKey } from 'lucide-react';
 import { useState } from 'react';
@@ -16,7 +16,7 @@ export const Route = createFileRoute('/auth/sign-in')({
 function RouteComponent() {
 	const [error, setError] = useState<string | null>(null);
 	const navigate = Route.useNavigate();
-
+	const router = useRouter();
 	const form = useForm({
 		onSubmit: async () => {
 			setError(null);
@@ -32,6 +32,7 @@ function RouteComponent() {
 			if (error) {
 				setError(error.message ?? error.statusText);
 			} else {
+				router.invalidate({ filter: (match) => match.routeId === '__root__' });
 				navigate({ to: '/inbox' });
 			}
 		},

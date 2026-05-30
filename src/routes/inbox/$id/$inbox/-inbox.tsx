@@ -7,20 +7,22 @@ import {
 	BellRing,
 	CalendarArrowDown,
 	CalendarArrowUp,
-	ChevronLeft,
-	ChevronRight,
 	Filter,
 	ListOrdered,
 	RefreshCcw,
 	Search,
+	StepBack,
+	StepForward,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '~/components/ui/button';
-import { ButtonGroup } from '~/components/ui/button-group';
 import { Field, FieldLabel } from '~/components/ui/field';
+import { Input } from '~/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '~/components/ui/input-group';
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from '~/components/ui/popover';
+import { ScrollArea } from '~/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select';
+import { Separator } from '~/components/ui/separator';
 import { Spinner } from '~/components/ui/spinner';
 import { Switch } from '~/components/ui/switch';
 import { database } from '~/lib/database/drizzle.server';
@@ -71,6 +73,7 @@ export const inboxOptions = ({ id, inbox }: RouteSchema) =>
 	queryOptions({
 		queryKey: ['email-inbox-emails', id, inbox],
 		queryFn: () => fetchInbox({ data: { id, inbox } }),
+		// TODO: change to true
 		refetchOnWindowFocus: false,
 	});
 
@@ -92,96 +95,121 @@ export default function Inbox() {
 	const { data: messages, isRefetching, refetch } = useSuspenseQuery(inboxOptions(parameters));
 
 	const [sortBy, setSortBy] = useState('ascending');
-	const [rowsPerPage, setRowsPerPage] = useState(50);
+	const [rowsPerPage, setRowsPerPage] = useState(25);
 	const [onlyUnreads, setOnlyUnreads] = useState(false);
 
+	// TODO: fix focus-visible not revealing all of the box shadow.
 	return (
-		<div className="@container flex flex-col gap-2 p-4">
-			<div className="flex w-full @sm:flex-row flex-col items-center justify-center gap-2">
-				<ButtonGroup aria-label="Inbox actions group">
-					<Button onClick={() => refetch()} disabled={isRefetching} aria-disabled={isRefetching}>
-						{isRefetching ? <Spinner /> : <RefreshCcw />}
-						Refresh
-					</Button>
-					<Popover>
-						<PopoverTrigger asChild>
-							<Button variant="secondary">
-								<Filter />
-								Filters
-							</Button>
-						</PopoverTrigger>
-						<PopoverContent>
-							<PopoverHeader>
-								<PopoverTitle>Configure Filters</PopoverTitle>
-							</PopoverHeader>
-							<Field orientation="horizontal">
-								<FieldLabel htmlFor="sort-by">
-									<ArrowUpDown className="size-4" />
-									Sort By
-								</FieldLabel>
-								<Select value={sortBy} onValueChange={setSortBy}>
-									<SelectTrigger id="sort-by">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent position="popper">
-										<SelectItem value="descending">
-											<CalendarArrowDown className="si" />
-											Descending
-										</SelectItem>
-										<SelectItem value="ascending">
-											<CalendarArrowUp />
-											Ascending
-										</SelectItem>
-									</SelectContent>
-								</Select>
-							</Field>
-							<Field orientation="horizontal">
-								<FieldLabel htmlFor="rows-per-page">
-									<ListOrdered className="size-4" />
-									Rows Per Page
-								</FieldLabel>
-								<Select value={String(rowsPerPage)} onValueChange={(value) => setRowsPerPage(Number(value))}>
-									<SelectTrigger id="rows-per-page">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent position="popper">
-										{[5, 10, 25, 50, 100].map((pageSize) => (
-											<SelectItem key={pageSize} value={`${pageSize}`}>
-												{pageSize}
+		<div className="@container flex h-full max-h-full! min-h-0 flex-col justify-between gap-2">
+			<div>
+				<div className="flex @sm:flex-row flex-col">
+					<div className="flex flex-row">
+						<Button
+							className="grow rounded-none border-none"
+							onClick={() => refetch()}
+							disabled={isRefetching}
+							aria-disabled={isRefetching}
+						>
+							{isRefetching ? <Spinner /> : <RefreshCcw />}
+							Refresh
+						</Button>
+						<Separator orientation="vertical" />
+						<Popover>
+							<PopoverTrigger asChild>
+								<Button variant="ghost" className="grow rounded-none border-none">
+									<Filter />
+									Filters
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent>
+								<PopoverHeader>
+									<PopoverTitle>Configure Filters</PopoverTitle>
+								</PopoverHeader>
+								<Field orientation="horizontal">
+									<FieldLabel htmlFor="sort-by">
+										<ArrowUpDown className="size-4" />
+										Sort By
+									</FieldLabel>
+									<Select value={sortBy} onValueChange={setSortBy}>
+										<SelectTrigger id="sort-by">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent position="popper">
+											<SelectItem value="descending">
+												<CalendarArrowDown className="si" />
+												Descending
 											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</Field>
-							<Field orientation="horizontal">
-								<FieldLabel htmlFor="only-unreads">
-									<BellRing className="size-4" />
-									Only Unreads
-								</FieldLabel>
-								<Switch id="only-unreads" checked={onlyUnreads} onCheckedChange={setOnlyUnreads} />
-							</Field>
-						</PopoverContent>
-					</Popover>
-				</ButtonGroup>
-				<ButtonGroup aria-label="Inbox pagination group">
-					<Button variant="outline">
-						<ChevronLeft />
-					</Button>
-					<Button variant="outline" className="opacity-100!" disabled>
-						Page 1 of 1
-					</Button>
-					<Button variant="outline">
-						<ChevronRight />
-					</Button>
-				</ButtonGroup>
+											<SelectItem value="ascending">
+												<CalendarArrowUp />
+												Ascending
+											</SelectItem>
+										</SelectContent>
+									</Select>
+								</Field>
+								<Field orientation="horizontal">
+									<FieldLabel htmlFor="rows-per-page">
+										<ListOrdered className="size-4" />
+										Rows Per Page
+									</FieldLabel>
+									<Select value={String(rowsPerPage)} onValueChange={(value) => setRowsPerPage(Number(value))}>
+										<SelectTrigger id="rows-per-page">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent position="popper">
+											{[5, 10, 25, 50, 100].map((pageSize) => (
+												<SelectItem key={pageSize} value={`${pageSize}`}>
+													{pageSize}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</Field>
+								<Field orientation="horizontal">
+									<FieldLabel htmlFor="only-unreads">
+										<BellRing className="size-4" />
+										Only Unreads
+									</FieldLabel>
+									<Switch id="only-unreads" checked={onlyUnreads} onCheckedChange={setOnlyUnreads} />
+								</Field>
+							</PopoverContent>
+						</Popover>
+					</div>
+					<InputGroup className="max-w-full rounded-none border-none">
+						<InputGroupInput placeholder="Search..." />
+						<InputGroupAddon>
+							<Search />
+						</InputGroupAddon>
+					</InputGroup>
+				</div>
+				<Separator />
 			</div>
-			<div className="flex justify-center">
-				<InputGroup className="max-w-full">
-					<InputGroupInput placeholder="Search..." />
-					<InputGroupAddon>
-						<Search />
-					</InputGroupAddon>
-				</InputGroup>
+			<ScrollArea className="max-h-full border">
+				<div className="flex flex-col gap-12">
+					{messages.map((message) => (
+						<div key={message.uid}>
+							<p>{message.envelope?.from?.map((recipient) => recipient.name).join(', ')}</p>
+							<p>{message.envelope?.subject}</p>
+						</div>
+					))}
+				</div>
+			</ScrollArea>
+			<div>
+				<Separator />
+				<div className="flex flex-row items-center">
+					<Button variant="ghost" className="grow rounded-none">
+						<StepBack />
+						<span className="@sm:inline-block hidden">Previous</span>
+					</Button>
+					<Separator orientation="vertical" />
+					<span className="inline-flex grow flex-row place-content-center gap-2 px-2 text-sm">
+						Page <Input type="text" inputMode="numeric" className="h-5 w-10 px-2 text-sm" /> of 1
+					</span>
+					<Separator orientation="vertical" />
+					<Button variant="ghost" className="grow rounded-none">
+						<span className="@sm:inline-block hidden">Next</span>
+						<StepForward />
+					</Button>
+				</div>
 			</div>
 		</div>
 	);

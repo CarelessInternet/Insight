@@ -1,9 +1,16 @@
 // https://github.com/shadcn-ui/ui/pull/7173#issuecomment-3655991797
+// https://ui.shadcn.com/docs/dark-mode/tanstack-start
 
-import { useRouter } from '@tanstack/react-router';
 import type { PropsWithChildren } from 'react';
-import { createContext, useContext, useEffect } from 'react';
-import { type Appearance, type Palette, setAppearanceServerFn, type Theme } from '~/lib/appearance';
+import { createContext, useContext, useEffect, useState } from 'react';
+import {
+	type Appearance,
+	defaultAppearance,
+	getAppearance,
+	type Palette,
+	setAppearance,
+	type Theme,
+} from '~/lib/appearance';
 
 const AppearanceContext = createContext<{
 	theme: Theme;
@@ -12,15 +19,27 @@ const AppearanceContext = createContext<{
 	setPalette: (value: Palette) => void;
 } | null>(null);
 
-export function AppearanceProvider({ appearance, children }: PropsWithChildren<{ appearance: Appearance }>) {
-	const router = useRouter();
+export function AppearanceProvider({ children }: PropsWithChildren) {
+	const [appearance, setAppearanceState] = useState<Appearance>(defaultAppearance);
+	const [mounted, setMounted] = useState(false);
 
-	async function setAppearance(value: Partial<Appearance>) {
-		await setAppearanceServerFn({ data: { ...appearance, ...value } });
-		await router.invalidate();
+	function setAppearanceFn(value: Partial<Appearance>) {
+		const newAppearance = { ...appearance, ...value };
+
+		setAppearance(newAppearance);
+		setAppearanceState(newAppearance);
 	}
 
 	useEffect(() => {
+		setAppearanceState(getAppearance());
+		setMounted(true);
+	}, []);
+
+	useEffect(() => {
+		if (!mounted) {
+			return;
+		}
+
 		const root = document.documentElement;
 		root.dataset.palette = appearance.palette;
 
@@ -37,14 +56,14 @@ export function AppearanceProvider({ appearance, children }: PropsWithChildren<{
 		}
 
 		applyDark(appearance.theme === 'dark');
-	}, [appearance]);
+	}, [appearance, mounted]);
 
 	return (
 		<AppearanceContext.Provider
 			value={{
 				...appearance,
-				setPalette: (palette) => setAppearance({ palette }),
-				setTheme: (theme) => setAppearance({ theme }),
+				setPalette: (palette) => setAppearanceFn({ palette }),
+				setTheme: (theme) => setAppearanceFn({ theme }),
 			}}
 		>
 			{children}
@@ -56,7 +75,7 @@ export function useAppearance() {
 	const value = useContext(AppearanceContext);
 
 	if (!value) {
-		throw new Error('useTheme called outside of ThemeProvider!');
+		throw new Error('useAppearance called outside of AppearanceProvider!');
 	}
 
 	return value;

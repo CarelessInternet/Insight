@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { and, eq } from 'drizzle-orm';
 import { Trash, Trash2Icon } from 'lucide-react';
@@ -21,7 +22,9 @@ import { emailAccount, emailAccountSelectSchema } from '~/lib/database/schema';
 import { formResponse } from '~/lib/forms';
 import logger from '~/lib/logger.server';
 import { sessionMiddleware } from '~/lib/middleware';
-import { type EmailAccount, emailAccountQueryKey } from './-email.table';
+import { type EmailAccount, invalidateEmailAccountsQueryKey } from './-email.table';
+
+const Route = getRouteApi('/account/settings/');
 
 const deleteEmailFn = createServerFn({ method: 'POST' })
 	.middleware([sessionMiddleware])
@@ -54,13 +57,15 @@ export default function EmailDelete(properties: DropdownDialog<EmailAccount, tru
 }
 
 function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
+	const { userId } = Route.useLoaderData();
 	const queryClient = useQueryClient();
 	const deleteEmail = useServerFn(deleteEmailFn);
+
 	const { isPending, mutate } = useMutation({
 		mutationFn: () => deleteEmail({ data: row.id }),
 		onSettled(data) {
 			if (data?.success) {
-				queryClient.invalidateQueries({ queryKey: [emailAccountQueryKey] });
+				queryClient.invalidateQueries({ queryKey: invalidateEmailAccountsQueryKey(userId) });
 				toast.dismiss();
 				toast.success(data.message);
 				setOpen(false);
@@ -86,7 +91,12 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
-					<AlertDialogAction variant="destructive" onClick={() => mutate()} disabled={isPending}>
+					<AlertDialogAction
+						variant="destructive"
+						onClick={() => mutate()}
+						disabled={isPending}
+						aria-disabled={isPending}
+					>
 						{isPending ? <Spinner /> : <Trash />}
 						Delete
 					</AlertDialogAction>

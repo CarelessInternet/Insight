@@ -1,16 +1,20 @@
 import { redirect } from '@tanstack/react-router';
-import { createMiddleware, createServerFn } from '@tanstack/react-start';
+import { createIsomorphicFn, createMiddleware } from '@tanstack/react-start';
 import { getRequestHeaders } from '@tanstack/react-start/server';
 import z from 'zod';
+import authClient from './authentication/client';
 import auth from './authentication/server';
 import { database } from './database/drizzle.server';
 import { emailAccountSelectSchema } from './database/schema';
 import Email from './email.server';
 import logger from './logger.server';
 
-export const getSession = createServerFn({ method: 'GET' }).handler(
-	async () => await auth.api.getSession({ headers: getRequestHeaders() }),
-);
+export const getSession: () => Promise<typeof auth.$Infer.Session | null> = createIsomorphicFn()
+	.server(async () => await auth.api.getSession({ headers: getRequestHeaders() }))
+	.client(async () => {
+		const { data } = await authClient.getSession();
+		return data;
+	});
 
 export const sessionMiddleware = createMiddleware({ type: 'request' }).server(
 	async ({ next, pathname, serverFnMeta }) => {

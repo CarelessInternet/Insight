@@ -22,7 +22,7 @@ import SidebarFolders, { foldersOptions } from './$inbox/-sidebar.folders';
 
 export const Route = createFileRoute('/inbox/$id')({
 	component: RouteComponent,
-	loader: async ({ context: { queryClient }, params: { id } }) => {
+	loader: ({ context: { queryClient }, params: { id } }) => {
 		void queryClient.prefetchQuery(foldersOptions(id));
 		void queryClient.prefetchQuery(accountsOptions(id));
 	},

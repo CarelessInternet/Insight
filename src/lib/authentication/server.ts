@@ -28,7 +28,7 @@ const auth = betterAuth({
 		schema,
 	}),
 	emailAndPassword: {
-		enabled: true,
+		enabled: false,
 	},
 	experimental: { joins: true },
 	plugins: [
@@ -83,12 +83,17 @@ const auth = betterAuth({
 			await cache.delete(key);
 		},
 	},
+	rateLimit: {
+		enabled: true,
+		storage: 'secondary-storage',
+	},
 	session: {
 		cookieCache: {
 			enabled: true,
 			maxAge: 5 * 60,
 			strategy: 'jwe',
 		},
+		storeSessionInDatabase: true,
 	},
 });
 

@@ -25,9 +25,7 @@ export function isInvalidField(field: AnyFieldApi) {
 	return hasClientError || hasServerError;
 }
 
-export const getFormDataFromServer = createServerFn({ method: 'GET' }).handler(async () => {
-	return await getFormData();
-});
+export const getFormDataFromServer = createServerFn({ method: 'GET' }).handler(async () => await getFormData());
 
 export type FormDataServer = Awaited<ReturnType<typeof getFormDataFromServer>>;
 

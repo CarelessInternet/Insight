@@ -6,7 +6,7 @@ import authClient from '~/lib/authentication/client';
 const Route = getRouteApi('/account/settings/');
 
 export default function PasskeySetting() {
-	const passkeys = Route.useLoaderData();
+	const { passkeys } = Route.useLoaderData();
 	const [disabled, setDisabled] = useState(passkeys.length > 0);
 
 	return (

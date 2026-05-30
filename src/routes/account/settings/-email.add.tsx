@@ -7,6 +7,7 @@ import {
 	useTransform,
 } from '@tanstack/react-form-start';
 import { useQueryClient } from '@tanstack/react-query';
+import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { CircleX, Eraser, MailPlus } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -42,7 +43,9 @@ import {
 } from '~/lib/forms';
 import logger from '~/lib/logger.server';
 import { sessionMiddleware } from '~/lib/middleware';
-import { emailAccountsOptions } from './-email.table';
+import { invalidateEmailAccountsQueryKey } from './-email.table';
+
+const Route = getRouteApi('/account/settings/');
 
 const accountOptions = formOptions({
 	defaultValues: {
@@ -107,6 +110,7 @@ export const handleForm = createServerFn({ method: 'POST' })
 	});
 
 export default function AddEmailAccount() {
+	const { userId } = Route.useLoaderData();
 	const queryClient = useQueryClient();
 	// biome-ignore lint/style/noNonNullAssertion: useRef.
 	const ref = useRef<HTMLFormElement>(null!);
@@ -128,7 +132,7 @@ export default function AddEmailAccount() {
 
 			if (isFormResponse(response)) {
 				if (response.success) {
-					queryClient.invalidateQueries({ queryKey: [emailAccountsOptions().queryKey.at(0)] });
+					queryClient.invalidateQueries({ queryKey: invalidateEmailAccountsQueryKey(userId) });
 					toast.dismiss();
 					toast.success(response.message);
 					setDialogOpen(false);

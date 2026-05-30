@@ -1,29 +1,59 @@
-import { createServerFn } from '@tanstack/react-start';
-import { getCookie, setCookie } from '@tanstack/react-start/server';
+import { createClientOnlyFn } from '@tanstack/react-start';
 import z from 'zod';
 
 const storageKey = 'ui-theme';
-const appearance = z.object({
-	theme: z.enum(['light', 'dark', 'system']),
-	palette: z.enum(['default', 'rose', 'orange', 'green', 'sky']),
-});
+// https://zod.dev/codecs#jsonschema
+const appearance = z.codec(
+	z.string(),
+	z.object({
+		theme: z.enum(['light', 'dark', 'system']),
+		palette: z.enum(['default', 'rose', 'orange', 'green', 'sky']),
+	}),
+	{
+		decode: (jsonString, ctx) => {
+			try {
+				return JSON.parse(jsonString);
+			} catch (err) {
+				ctx.issues.push({
+					code: 'invalid_format',
+					format: 'json',
+					input: jsonString,
+					message: (err as Error).message,
+				});
 
-export type Appearance = z.infer<typeof appearance>;
+				return z.NEVER;
+			}
+		},
+		encode: (value) => JSON.stringify(value),
+	},
+);
+
+export type Appearance = z.output<typeof appearance>;
 export const defaultAppearance = { theme: 'system', palette: 'default' } as const satisfies Appearance;
 
-export type Theme = z.infer<typeof appearance.shape.theme>;
-export type Palette = z.infer<typeof appearance.shape.palette>;
+export type Theme = Appearance['theme'];
+export type Palette = Appearance['palette'];
 
-export const getAppearanceServerFn = createServerFn({ method: 'GET' }).handler(() => {
-	const cookie = getCookie(storageKey);
-
-	if (!cookie) {
+export const getAppearance = createClientOnlyFn(() => {
+	try {
+		return appearance.decode(localStorage.getItem(storageKey) || '');
+	} catch {
 		return defaultAppearance;
 	}
-
-	return appearance.safeParse(JSON.parse(cookie)).data ?? defaultAppearance;
 });
 
-export const setAppearanceServerFn = createServerFn({ method: 'POST' })
-	.inputValidator(appearance)
-	.handler(({ data }) => setCookie(storageKey, JSON.stringify(data)));
+export const setAppearance = createClientOnlyFn((data: Appearance) =>
+	localStorage.setItem(storageKey, appearance.encode(data)),
+);
+
+export const appearanceScript = `
+	const storage = localStorage.getItem('${storageKey}');
+	const appearance = storage ? JSON.parse(storage) : ${JSON.stringify(defaultAppearance)};
+	const dark = appearance.theme === 'system'
+		? matchMedia('(prefers-color-scheme: dark)').matches
+		: appearance.theme === 'dark';
+
+	const root = document.documentElement;
+	root.dataset.palette = appearance.palette;
+	root.classList.toggle('dark', dark);
+`;

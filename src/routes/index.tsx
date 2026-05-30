@@ -11,7 +11,7 @@ function Home() {
 
 	return (
 		<div>
-			User: {state?.user?.email ?? 'None.'}
+			User: {state.user?.email ?? 'None.'}
 			<Route.Link to="/account/settings">Settings</Route.Link>
 		</div>
 	);

@@ -2,7 +2,7 @@ import { createCsrfMiddleware, createMiddleware, createStart } from '@tanstack/r
 
 const csrfMiddleware = createCsrfMiddleware({
 	filter: ({ handlerType }) => handlerType === 'serverFn',
-})
+});
 
 const loggingFunctionMiddleware = createMiddleware({ type: 'function' }).server(
 	async ({ method, next, serverFnMeta: { name, filename } }) => {
@@ -16,5 +16,6 @@ const loggingFunctionMiddleware = createMiddleware({ type: 'function' }).server(
 );
 
 export const startInstance = createStart(() => ({
-	functionMiddleware: [loggingFunctionMiddleware], requestMiddleware: [csrfMiddleware]
+	functionMiddleware: [loggingFunctionMiddleware],
+	requestMiddleware: [csrfMiddleware],
 }));

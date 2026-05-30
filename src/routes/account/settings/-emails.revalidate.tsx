@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { and, eq, inArray } from 'drizzle-orm';
 import { Wrench } from 'lucide-react';
@@ -12,7 +13,9 @@ import Email from '~/lib/email.server';
 import { formResponse } from '~/lib/forms';
 import logger from '~/lib/logger.server';
 import { sessionMiddleware } from '~/lib/middleware';
-import { type EmailAccount, emailAccountQueryKey } from './-email.table';
+import { type EmailAccount, invalidateEmailAccountsQueryKey } from './-email.table';
+
+const Route = getRouteApi('/account/settings/');
 
 const revalidateEmailsFn = createServerFn({ method: 'POST' })
 	.middleware([sessionMiddleware])
@@ -74,6 +77,7 @@ const revalidateEmailsFn = createServerFn({ method: 'POST' })
 	});
 
 export default function RevalidateEmails({ onRevalidated, rows }: { onRevalidated: () => void; rows: EmailAccount[] }) {
+	const { userId } = Route.useLoaderData();
 	const queryClient = useQueryClient();
 	const revalidateEmails = useServerFn(revalidateEmailsFn);
 
@@ -81,7 +85,7 @@ export default function RevalidateEmails({ onRevalidated, rows }: { onRevalidate
 		mutationFn: () => revalidateEmails({ data: rows.map((data) => data.id) }),
 		onSettled(data) {
 			if (data?.success) {
-				queryClient.invalidateQueries({ queryKey: [emailAccountQueryKey] });
+				queryClient.invalidateQueries({ queryKey: invalidateEmailAccountsQueryKey(userId) });
 				toast.dismiss();
 				toast.success(data.message);
 			} else {

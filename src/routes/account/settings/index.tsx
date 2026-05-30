@@ -7,17 +7,17 @@ import { Skeleton } from '~/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableRow } from '~/components/ui/table';
 import authClient from '~/lib/authentication/client';
 import auth from '~/lib/authentication/server';
-import { sessionMiddleware } from '~/lib/middleware';
-import EmailAccounts, { emailAccountsOptions } from './-email.table';
+import { getSession } from '~/lib/middleware';
+import EmailAccounts, { defaultPagination, emailAccountsOptions } from './-email.table';
 import Passkey from './-passkey';
 
 const getUserData = createIsomorphicFn()
-	.server(async (queryClient: QueryClient) => {
-		void queryClient.prefetchQuery(emailAccountsOptions());
+	.server(async (queryClient: QueryClient, userId: typeof auth.$Infer.Session.user.id) => {
+		void queryClient.prefetchQuery(emailAccountsOptions({ pagination: defaultPagination, userId }));
 		return await auth.api.listPasskeys({ headers: getRequestHeaders() });
 	})
-	.client(async (queryClient: QueryClient) => {
-		void queryClient.prefetchQuery(emailAccountsOptions());
+	.client(async (queryClient: QueryClient, userId: typeof auth.$Infer.Session.user.id) => {
+		void queryClient.prefetchQuery(emailAccountsOptions({ pagination: defaultPagination, userId }));
 		const passkeys = await authClient.passkey.listUserPasskeys();
 
 		return Array.isArray(passkeys.data) ? passkeys.data : [];
@@ -25,9 +25,13 @@ const getUserData = createIsomorphicFn()
 
 export const Route = createFileRoute('/account/settings/')({
 	component: RouteComponent,
-	loader: ({ context: { queryClient } }) => getUserData(queryClient),
-	server: {
-		middleware: [sessionMiddleware],
+	beforeLoad: async () => ({ ...(await getSession()) }),
+	loader: async ({ context: { queryClient, user } }) => {
+		if (!user) {
+			throw Route.redirect({ to: '/auth/sign-in' });
+		}
+
+		return { passkeys: await getUserData(queryClient, user.id), userId: user.id };
 	},
 });
 

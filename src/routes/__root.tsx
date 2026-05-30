@@ -3,7 +3,7 @@ import { createMiddleware } from '@tanstack/react-start';
 import { AppearanceProvider } from '~/components/appearance-provider';
 import Header from '~/components/header';
 import { Toaster } from '~/components/ui/sonner';
-import { getAppearanceServerFn } from '~/lib/appearance';
+import { appearanceScript } from '~/lib/appearance';
 import logger from '~/lib/logger.server';
 import { getSession } from '~/lib/middleware';
 import type getQueryClient from '~/lib/query';
@@ -41,32 +41,20 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 	}),
 	beforeLoad: async () => ({ ...(await getSession()) }),
 	component: RootComponent,
-	loader: () => getAppearanceServerFn(),
 	server: {
 		middleware: [loggingRequestMiddleware],
 	},
 });
 
 function RootComponent() {
-	const appearance = Route.useLoaderData();
-	const themeClass = appearance.theme === 'dark' ? 'dark' : '';
-
 	return (
-		<AppearanceProvider appearance={appearance}>
-			<html lang="en" className={themeClass} data-palette={appearance.palette} suppressHydrationWarning>
-				<head>
-					{appearance.theme === 'system' && (
-						<ScriptOnce>
-							{`
-								if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-									document.documentElement.classList.add('dark');
-								}
-							`}
-						</ScriptOnce>
-					)}
-					<HeadContent />
-				</head>
-				<body className="flex min-h-screen flex-col">
+		<html lang="en" suppressHydrationWarning>
+			<head>
+				<ScriptOnce>{appearanceScript}</ScriptOnce>
+				<HeadContent />
+			</head>
+			<body className="flex min-h-screen flex-col">
+				<AppearanceProvider>
 					<Header />
 					<div className="contents min-h-full flex-1">
 						<Outlet />
@@ -74,8 +62,8 @@ function RootComponent() {
 					{/* pointer-events-auto allows toasts to be dismissed with a dialog open (see sonner.tsx). */}
 					<Toaster richColors className="pointer-events-auto" />
 					<Scripts />
-				</body>
-			</html>
-		</AppearanceProvider>
+				</AppearanceProvider>
+			</body>
+		</html>
 	);
 }

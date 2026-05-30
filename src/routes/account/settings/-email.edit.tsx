@@ -1,6 +1,7 @@
 import { mergeForm, useForm } from '@tanstack/react-form';
 import { createServerValidate, initialFormState, ServerValidateError, useTransform } from '@tanstack/react-form-start';
 import { useQueryClient } from '@tanstack/react-query';
+import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq } from 'drizzle-orm';
 import { createSelectSchema } from 'drizzle-zod';
@@ -37,7 +38,9 @@ import {
 } from '~/lib/forms';
 import logger from '~/lib/logger.server';
 import { sessionMiddleware } from '~/lib/middleware';
-import { type EmailAccount, emailAccountQueryKey } from './-email.table';
+import { type EmailAccount, invalidateEmailAccountsQueryKey } from './-email.table';
+
+const Route = getRouteApi('/account/settings/');
 
 const emailSchema = createSelectSchema(emailAccount, {
 	hostname: z.hostname().nonempty(),
@@ -112,6 +115,7 @@ export default function EmailEdit(properties: DropdownDialog<EmailAccount, true>
 }
 
 function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
+	const { userId } = Route.useLoaderData();
 	const queryClient = useQueryClient();
 	// biome-ignore lint/style/noNonNullAssertion: useRef.
 	const ref = useRef<HTMLFormElement>(null!);
@@ -138,7 +142,7 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 
 			if (isFormResponse(response)) {
 				if (response.success) {
-					queryClient.invalidateQueries({ queryKey: [emailAccountQueryKey] });
+					queryClient.invalidateQueries({ queryKey: invalidateEmailAccountsQueryKey(userId) });
 					toast.dismiss();
 					toast.success(response.message);
 					setOpen(false);
