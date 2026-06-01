@@ -22,7 +22,7 @@ import {
 } from '~/components/ui/dialog';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
-import { handleInteractOutside } from '~/components/ui/sonner';
+import { hasToastPresent } from '~/components/ui/sonner';
 import { Spinner } from '~/components/ui/spinner';
 import { decrypt, encrypt, hash } from '~/lib/crypto.server';
 import { database } from '~/lib/database/drizzle.server';
@@ -154,7 +154,7 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 		},
 	});
 
-	// Change the form values when the user selects a different table row from the original.
+	// Change the form values when the user selects a different table row.
 	useEffect(
 		() =>
 			form.reset({
@@ -168,13 +168,17 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 	);
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent
-				onInteractOutside={handleInteractOutside}
-				// Don't highlight the first form field.
-				onOpenAutoFocus={(e) => e.preventDefault()}
-				className="sm:max-w-lg"
-			>
+		<Dialog
+			open={open}
+			onOpenChange={(open, details) => {
+				if (!open && details.reason === 'outside-press' && hasToastPresent(details.trigger)) {
+					return details.event.preventDefault();
+				}
+
+				setOpen(open);
+			}}
+		>
+			<DialogContent initialFocus={false} className="sm:max-w-lg">
 				<form
 					ref={ref}
 					onSubmit={(e) => {
@@ -290,7 +294,7 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 						</form.Field>
 					</FieldGroup>
 					<DialogFooter>
-						<DialogClose asChild>
+						<DialogClose>
 							<Button variant="outline">
 								<CircleX />
 								Cancel

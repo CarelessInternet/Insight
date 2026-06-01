@@ -26,7 +26,7 @@ import {
 } from '~/components/ui/dialog';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
-import { handleInteractOutside } from '~/components/ui/sonner';
+import { hasToastPresent } from '~/components/ui/sonner';
 import { Spinner } from '~/components/ui/spinner';
 import { encrypt, hash } from '~/lib/crypto.server';
 import { database } from '~/lib/database/drizzle.server';
@@ -145,14 +145,28 @@ export default function AddEmailAccount() {
 	});
 
 	return (
-		<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-			<DialogTrigger asChild>
-				<Button>
-					<MailPlus />
-					Add Email
-				</Button>
-			</DialogTrigger>
-			<DialogContent onInteractOutside={handleInteractOutside} className="sm:max-w-lg">
+		<Dialog
+			open={dialogOpen}
+			onOpenChange={(open, details) => {
+				if (!open && details.reason === 'outside-press' && hasToastPresent(details.trigger)) {
+					return details.event.preventDefault();
+				}
+
+				setDialogOpen(open);
+			}}
+		>
+			<DialogTrigger
+				render={
+					<Button>
+						<MailPlus />
+						Add Email
+					</Button>
+				}
+			/>
+			<DialogContent
+				// onInteractOutside={handleInteractOutside}
+				className="sm:max-w-lg"
+			>
 				<form
 					ref={ref}
 					onSubmit={(e) => {
@@ -268,12 +282,14 @@ export default function AddEmailAccount() {
 						</form.Field>
 					</FieldGroup>
 					<DialogFooter>
-						<DialogClose asChild>
-							<Button variant="outline">
-								<CircleX />
-								Cancel
-							</Button>
-						</DialogClose>
+						<DialogClose
+							render={
+								<Button variant="outline">
+									<CircleX />
+									Cancel
+								</Button>
+							}
+						/>
 						<Button type="reset" variant="destructive" onClick={() => form.reset()}>
 							<Eraser />
 							Reset

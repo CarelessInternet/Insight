@@ -39,6 +39,7 @@ import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -133,7 +134,7 @@ const columns = [
 		id: 'select',
 		header: ({ table }) => (
 			<Checkbox
-				checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')}
+				checked={table.getIsAllPageRowsSelected() || table.getIsSomePageRowsSelected()}
 				onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
 				aria-label="Select all"
 			/>
@@ -233,38 +234,44 @@ const columns = [
 		id: 'actions',
 		cell: ({ row, table }) => (
 			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button variant="ghost" className="h-8 w-8 p-0">
-						<span className="sr-only">Open menu</span>
-						<MoreHorizontal className="h-4 w-4" />
-					</Button>
-				</DropdownMenuTrigger>
+				<DropdownMenuTrigger
+					render={
+						<Button variant="ghost" className="size-8 p-0">
+							<span className="sr-only">Open menu</span>
+							<MoreHorizontal className="size-4" />
+						</Button>
+					}
+				/>
 				<DropdownMenuContent align="end">
-					<DropdownMenuLabel>Actions</DropdownMenuLabel>
-					<DropdownMenuItem asChild>
-						<Route.Link to="/inbox/$id/$inbox" params={{ id: row.original.id, inbox: 'INBOX' }}>
-							<MailOpen />
-							View Inbox
-						</Route.Link>
-					</DropdownMenuItem>
-					<DropdownMenuItem
-						onSelect={(e) => {
-							e.preventDefault();
-							table.options.meta?.openAction('edit', row.original);
-						}}
-					>
-						<UserPen /> Edit Credentials
-					</DropdownMenuItem>
-					<DropdownMenuSeparator />
-					<DropdownMenuItem
-						variant="destructive"
-						onSelect={(e) => {
-							e.preventDefault();
-							table.options.meta?.openAction('delete', row.original);
-						}}
-					>
-						<MailX /> Delete Email
-					</DropdownMenuItem>
+					<DropdownMenuGroup>
+						<DropdownMenuLabel>Actions</DropdownMenuLabel>
+						<DropdownMenuItem
+							render={
+								<Route.Link to="/inbox/$id/$inbox" params={{ id: row.original.id, inbox: 'INBOX' }}>
+									<MailOpen />
+									View Inbox
+								</Route.Link>
+							}
+						/>
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.preventDefault();
+								table.options.meta?.openAction('edit', row.original);
+							}}
+						>
+							<UserPen /> Edit Credentials
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem
+							variant="destructive"
+							onClick={(e) => {
+								e.preventDefault();
+								table.options.meta?.openAction('delete', row.original);
+							}}
+						>
+							<MailX /> Delete Email
+						</DropdownMenuItem>
+					</DropdownMenuGroup>
 				</DropdownMenuContent>
 			</DropdownMenu>
 		),
@@ -339,13 +346,15 @@ export default function EmailAccountsTable() {
 							/>
 							<InputGroupAddon align="inline-end">
 								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<InputGroupButton variant="outline">
-											<Columns3Cog />
-											Columns
-											<ChevronDown />
-										</InputGroupButton>
-									</DropdownMenuTrigger>
+									<DropdownMenuTrigger
+										render={
+											<InputGroupButton variant="outline">
+												<Columns3Cog />
+												Columns
+												<ChevronDown />
+											</InputGroupButton>
+										}
+									/>
 									<DropdownMenuContent align="end">
 										{table
 											.getAllColumns()

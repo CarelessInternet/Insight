@@ -84,19 +84,21 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 			<SidebarMenuItem>
 				<Collapsible
 					defaultOpen={!!folder.path && inbox.includes(folder.path)}
-					className="group [&[data-state=open]>button>div>svg:first-child]:rotate-90"
+					className="group [&[data-open]>button>div>svg:first-child]:rotate-90"
 				>
-					<CollapsibleTrigger asChild>
-						<SidebarMenuButton isActive={isActive}>
-							<Route.Link to="/inbox/$id/$inbox" params={{ id, inbox: folder.path }} className="contents">
-								{folder.specialUse === '\\Inbox' ? FolderIcon({ specialUse: folder.specialUse }) : <Folder />}
-								{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
-							</Route.Link>
-							<SidebarMenuBadge>
-								<ChevronRight className="transition-transform" />
-							</SidebarMenuBadge>
-						</SidebarMenuButton>
-					</CollapsibleTrigger>
+					<CollapsibleTrigger
+						render={
+							<SidebarMenuButton isActive={isActive}>
+								<Route.Link to="/inbox/$id/$inbox" params={{ id, inbox: folder.path }} className="contents">
+									{folder.specialUse === '\\Inbox' ? FolderIcon({ specialUse: folder.specialUse }) : <Folder />}
+									{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
+								</Route.Link>
+								<SidebarMenuBadge>
+									<ChevronRight className="transition-transform" />
+								</SidebarMenuBadge>
+							</SidebarMenuButton>
+						}
+					/>
 					<CollapsibleContent>
 						<SidebarGroupContent>
 							<SidebarMenuSub className="mr-0 pr-0">
@@ -113,12 +115,16 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 
 	return (
 		<SidebarMenuItem key={folder.path}>
-			<SidebarMenuButton className="py-4.5" isActive={isActive} asChild>
-				<Route.Link to="/inbox/$id/$inbox" params={{ id, inbox: folder.path }}>
-					<FolderIcon specialUse={folder.specialUse} />
-					{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
-				</Route.Link>
-			</SidebarMenuButton>
+			<SidebarMenuButton
+				className="py-4.5"
+				isActive={isActive}
+				render={
+					<Route.Link to="/inbox/$id/$inbox" params={{ id, inbox: folder.path }}>
+						<FolderIcon specialUse={folder.specialUse} />
+						{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
+					</Route.Link>
+				}
+			/>
 		</SidebarMenuItem>
 	);
 }

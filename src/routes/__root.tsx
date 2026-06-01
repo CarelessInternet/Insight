@@ -3,6 +3,7 @@ import { createMiddleware } from '@tanstack/react-start';
 import { AppearanceProvider } from '~/components/appearance-provider';
 import Header from '~/components/header';
 import { Toaster } from '~/components/ui/sonner';
+import { TooltipProvider } from '~/components/ui/tooltip';
 import { appearanceScript } from '~/lib/appearance';
 import logger from '~/lib/logger.server';
 import { getSession } from '~/lib/middleware';
@@ -55,13 +56,15 @@ function RootComponent() {
 			</head>
 			<body className="flex min-h-screen flex-col">
 				<AppearanceProvider>
-					<Header />
-					<div className="contents min-h-full flex-1">
-						<Outlet />
-					</div>
-					{/* pointer-events-auto allows toasts to be dismissed with a dialog open (see sonner.tsx). */}
-					<Toaster richColors className="pointer-events-auto" />
-					<Scripts />
+					<TooltipProvider>
+						<Header />
+						<div className="contents min-h-full flex-1">
+							<Outlet />
+						</div>
+						{/* pointer-events-auto allows toasts to be dismissed with a dialog open (see sonner.tsx). */}
+						<Toaster richColors className="pointer-events-auto" />
+						<Scripts />
+					</TooltipProvider>
 				</AppearanceProvider>
 			</body>
 		</html>

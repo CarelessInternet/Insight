@@ -64,11 +64,9 @@ function Field({
 	className,
 	orientation = 'vertical',
 	...props
-}: React.ComponentProps<'div'> & VariantProps<typeof fieldVariants>) {
+}: React.ComponentProps<'fieldset'> & VariantProps<typeof fieldVariants>) {
 	return (
-		// biome-ignore lint/a11y/useSemanticElements: Not my problem.
-		<div
-			role="group"
+		<fieldset
 			data-slot="field"
 			data-orientation={orientation}
 			className={cn(fieldVariants({ orientation }), className)}
@@ -106,7 +104,7 @@ function FieldTitle({ className, ...props }: React.ComponentProps<'div'>) {
 		<div
 			data-slot="field-label"
 			className={cn(
-				'flex w-fit items-center gap-2 font-medium text-sm leading-snug group-data-[disabled=true]/field:opacity-50',
+				'flex w-fit items-center gap-2 font-medium text-sm group-data-[disabled=true]/field:opacity-50',
 				className,
 			)}
 			{...props}
@@ -181,8 +179,7 @@ function FieldError({
 
 		return (
 			<ul className="ml-4 flex list-disc flex-col gap-1">
-				{/** biome-ignore lint/suspicious/noArrayIndexKey: Not my problem. */}
-				{uniqueErrors.map((error, index) => error?.message && <li key={index}>{error.message}</li>)}
+				{uniqueErrors.map((error) => error?.message && <li key={crypto.randomUUID()}>{error.message}</li>)}
 			</ul>
 		);
 	}, [children, errors]);

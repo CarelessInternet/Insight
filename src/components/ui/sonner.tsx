@@ -38,10 +38,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
 // https://github.com/shadcn-ui/ui/issues/3461#issuecomment-2726898186
 // https://sonner.emilkowal.ski/other#shadow-dom-support
 // Prevent dismissing the dialog when clicking on a toast.
-const handleInteractOutside = (event: Event) => {
-	if (event.target instanceof Element && event.target.closest('[data-sonner-toaster]')) {
-		event.preventDefault();
-	}
-};
+const hasToastPresent = (target?: Element) => !!target?.closest('[data-sonner-toaster]');
 
-export { handleInteractOutside, Toaster };
+export { hasToastPresent, Toaster };

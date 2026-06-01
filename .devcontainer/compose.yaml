@@ -10,7 +10,8 @@ services:
       insight-database:
         condition: service_healthy
     volumes:
-      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
       - ..:/workspaces/Insight:cached
     command: /bin/sh -c "while sleep 1000; do :; done"
     networks:

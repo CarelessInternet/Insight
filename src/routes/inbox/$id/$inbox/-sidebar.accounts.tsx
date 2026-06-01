@@ -1,5 +1,5 @@
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
-import { getRouteApi, Link } from '@tanstack/react-router';
+import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { ChevronsUpDown, Mailbox, MailCheck, MailWarning, Settings } from 'lucide-react';
 import {
@@ -56,48 +56,55 @@ export default function SidebarEmailAccounts() {
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<SidebarMenuButton size="lg" className="group-data-[collapsible=icon]:p-0!">
-					<Mailbox className="size-8! text-primary" />
-					<div className="grid flex-1 text-left text-base leading-tight">
-						<span className="truncate font-bold">{currentEmail?.label ?? currentEmail?.email}</span>
-						<span className="truncate text-xs">
-							{currentEmail?.label ? currentEmail.email : currentEmail?.hostname}
-						</span>
-					</div>
-					<ChevronsUpDown />
-				</SidebarMenuButton>
-			</DropdownMenuTrigger>
+			<DropdownMenuTrigger
+				render={
+					<SidebarMenuButton size="lg" className="group-data-[collapsible=icon]:p-0!">
+						<Mailbox className="size-8! text-primary" />
+						<div className="grid flex-1 text-left text-base leading-tight">
+							<span className="truncate font-bold">{currentEmail?.label ?? currentEmail?.email}</span>
+							<span className="truncate text-xs">
+								{currentEmail?.label ? currentEmail.email : currentEmail?.hostname}
+							</span>
+						</div>
+						<ChevronsUpDown />
+					</SidebarMenuButton>
+				}
+			/>
 			<DropdownMenuContent>
 				{otherEmails.length > 0 && (
 					<>
 						<DropdownMenuGroup>
 							<DropdownMenuLabel>Other Email Accounts</DropdownMenuLabel>
 							{otherEmails.map((email) => (
-								<DropdownMenuItem key={email.id} asChild>
-									<Link to="/inbox/$id/$inbox" params={{ id: email.id, inbox: 'INBOX' }}>
-										{email.status === 'valid' ? (
-											<MailCheck className="text-primary" />
-										) : (
-											<MailWarning className="text-destructive" />
-										)}
-										<div className="grid flex-1 text-left leading-tight">
-											<span className="truncate font-bold text-md">{email.label ?? email.email}</span>
-											<span className="truncate text-xs">{email.label ? email.email : email.hostname}</span>
-										</div>
-									</Link>
-								</DropdownMenuItem>
+								<DropdownMenuItem
+									key={email.id}
+									render={
+										<Route.Link to="/inbox/$id/$inbox" params={{ id: email.id, inbox: 'INBOX' }}>
+											{email.status === 'valid' ? (
+												<MailCheck className="text-primary" />
+											) : (
+												<MailWarning className="text-destructive" />
+											)}
+											<div className="grid flex-1 text-left leading-tight">
+												<span className="truncate font-bold text-md">{email.label ?? email.email}</span>
+												<span className="truncate text-xs">{email.label ? email.email : email.hostname}</span>
+											</div>
+										</Route.Link>
+									}
+								/>
 							))}
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
 					</>
 				)}
 				<DropdownMenuGroup>
-					<DropdownMenuItem asChild>
-						<Link to="/account/settings">
-							<Settings /> Settings
-						</Link>
-					</DropdownMenuItem>
+					<DropdownMenuItem
+						render={
+							<Route.Link to="/account/settings">
+								<Settings /> Settings
+							</Route.Link>
+						}
+					/>
 				</DropdownMenuGroup>
 			</DropdownMenuContent>
 		</DropdownMenu>

@@ -14,14 +14,14 @@ import {
 	StepBack,
 	StepForward,
 } from 'lucide-react';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Button } from '~/components/ui/button';
 import { Field, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '~/components/ui/input-group';
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from '~/components/ui/popover';
 import { ScrollArea } from '~/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select';
 import { Separator } from '~/components/ui/separator';
 import { Spinner } from '~/components/ui/spinner';
 import { Switch } from '~/components/ui/switch';
@@ -77,6 +77,21 @@ export const inboxOptions = ({ id, inbox }: RouteSchema) =>
 		refetchOnWindowFocus: false,
 	});
 
+const sortByItems = {
+	descending: (
+		<>
+			<CalendarArrowDown />
+			Descending
+		</>
+	),
+	ascending: (
+		<>
+			<CalendarArrowUp />
+			Ascending
+		</>
+	),
+} as const satisfies Record<string, ReactNode>;
+
 /*
 	TODO: Resizable component for email list and email message would be sick.
 	UI:
@@ -94,14 +109,14 @@ export default function Inbox() {
 	const parameters = Route.useParams();
 	const { data: messages, isRefetching, refetch } = useSuspenseQuery(inboxOptions(parameters));
 
-	const [sortBy, setSortBy] = useState('ascending');
+	const [sortBy, setSortBy] = useState<keyof typeof sortByItems | null>('ascending');
 	const [rowsPerPage, setRowsPerPage] = useState(25);
 	const [onlyUnreads, setOnlyUnreads] = useState(false);
 
 	// TODO: fix focus-visible not revealing all of the box shadow.
 	return (
-		<div className="@container flex h-full max-h-full! min-h-0 flex-col justify-between gap-2">
-			<div>
+		<div className="@container flex h-full max-h-[calc(100dvh-var(--header-height))] flex-col overflow-hidden">
+			<div className="flex-none">
 				<div className="flex @sm:flex-row flex-col">
 					<div className="flex flex-row">
 						<Button
@@ -115,12 +130,14 @@ export default function Inbox() {
 						</Button>
 						<Separator orientation="vertical" />
 						<Popover>
-							<PopoverTrigger asChild>
-								<Button variant="ghost" className="grow rounded-none border-none">
-									<Filter />
-									Filters
-								</Button>
-							</PopoverTrigger>
+							<PopoverTrigger
+								render={
+									<Button variant="ghost" className="grow rounded-none border-none">
+										<Filter />
+										Filters
+									</Button>
+								}
+							/>
 							<PopoverContent>
 								<PopoverHeader>
 									<PopoverTitle>Configure Filters</PopoverTitle>
@@ -130,19 +147,18 @@ export default function Inbox() {
 										<ArrowUpDown className="size-4" />
 										Sort By
 									</FieldLabel>
-									<Select value={sortBy} onValueChange={setSortBy}>
-										<SelectTrigger id="sort-by">
-											<SelectValue />
+									<Select items={sortByItems} value={sortBy} onValueChange={setSortBy}>
+										<SelectTrigger id="sort-by" size="sm">
+											<SelectValue className="gap-2!" />
 										</SelectTrigger>
-										<SelectContent position="popper">
-											<SelectItem value="descending">
-												<CalendarArrowDown className="si" />
-												Descending
-											</SelectItem>
-											<SelectItem value="ascending">
-												<CalendarArrowUp />
-												Ascending
-											</SelectItem>
+										<SelectContent>
+											<SelectGroup>
+												{Object.entries(sortByItems).map(([value, label]) => (
+													<SelectItem key={value} value={value} className="[&>div]:items-center">
+														{label}
+													</SelectItem>
+												))}
+											</SelectGroup>
 										</SelectContent>
 									</Select>
 								</Field>
@@ -152,15 +168,17 @@ export default function Inbox() {
 										Rows Per Page
 									</FieldLabel>
 									<Select value={String(rowsPerPage)} onValueChange={(value) => setRowsPerPage(Number(value))}>
-										<SelectTrigger id="rows-per-page">
+										<SelectTrigger id="rows-per-page" size="sm">
 											<SelectValue />
 										</SelectTrigger>
-										<SelectContent position="popper">
-											{[5, 10, 25, 50, 100].map((pageSize) => (
-												<SelectItem key={pageSize} value={`${pageSize}`}>
-													{pageSize}
-												</SelectItem>
-											))}
+										<SelectContent>
+											<SelectGroup>
+												{[5, 10, 25, 50, 100].map((pageSize) => (
+													<SelectItem key={pageSize} value={`${pageSize}`}>
+														{pageSize}
+													</SelectItem>
+												))}
+											</SelectGroup>
 										</SelectContent>
 									</Select>
 								</Field>
@@ -183,20 +201,22 @@ export default function Inbox() {
 				</div>
 				<Separator />
 			</div>
-			<ScrollArea className="max-h-full border">
-				<div className="flex flex-col gap-12">
-					{messages.map((message) => (
-						<div key={message.uid}>
-							<p>{message.envelope?.from?.map((recipient) => recipient.name).join(', ')}</p>
-							<p>{message.envelope?.subject}</p>
-						</div>
-					))}
-				</div>
-			</ScrollArea>
-			<div>
+			<div className="grow overflow-y-auto">
+				<ScrollArea className="h-full">
+					<div className="flex flex-col gap-24">
+						{messages.map((message) => (
+							<div key={message.uid}>
+								<p>{message.envelope?.from?.map((recipient) => recipient.name).join(', ')}</p>
+								<p>{message.envelope?.subject}</p>
+							</div>
+						))}
+					</div>
+				</ScrollArea>
+			</div>
+			<div className="flex-none">
 				<Separator />
 				<div className="flex flex-row items-center">
-					<Button variant="ghost" className="grow rounded-none">
+					<Button variant="ghost" className="grow rounded-none border-none">
 						<StepBack />
 						<span className="@sm:inline-block hidden">Previous</span>
 					</Button>
@@ -205,7 +225,7 @@ export default function Inbox() {
 						Page <Input type="text" inputMode="numeric" className="h-5 w-10 px-2 text-sm" /> of 1
 					</span>
 					<Separator orientation="vertical" />
-					<Button variant="ghost" className="grow rounded-none">
+					<Button variant="ghost" className="grow rounded-none border-none">
 						<span className="@sm:inline-block hidden">Next</span>
 						<StepForward />
 					</Button>

@@ -134,32 +134,37 @@ export default function Header() {
 			<NavigationMenu>
 				<NavigationMenuList>
 					<NavigationMenuItem>
-						<NavigationMenuLink className={navigationMenuTriggerStyle()} asChild>
-							<Route.Link to="/inbox">Inbox</Route.Link>
-						</NavigationMenuLink>
+						<NavigationMenuLink
+							className={navigationMenuTriggerStyle()}
+							render={<Route.Link to="/inbox">Inbox</Route.Link>}
+						/>
 					</NavigationMenuItem>
 				</NavigationMenuList>
 			</NavigationMenu>
 			{user ? (
 				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button variant="ghost">
-							<Avatar>
-								<AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-							</Avatar>
-							{user.name}
-							<ChevronDown />
-						</Button>
-					</DropdownMenuTrigger>
+					<DropdownMenuTrigger
+						render={
+							<Button variant="ghost">
+								<Avatar>
+									<AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+								</Avatar>
+								{user.name}
+								<ChevronDown />
+							</Button>
+						}
+					/>
 					<DropdownMenuContent>
 						<DropdownMenuGroup>
 							<DropdownMenuLabel>My Account</DropdownMenuLabel>
-							<DropdownMenuItem asChild>
-								<Route.Link to="/account/settings">
-									<Settings />
-									Settings
-								</Route.Link>
-							</DropdownMenuItem>
+							<DropdownMenuItem
+								render={
+									<Route.Link to="/account/settings">
+										<Settings />
+										Settings
+									</Route.Link>
+								}
+							/>
 							<AppearanceDropdown />
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
@@ -173,34 +178,38 @@ export default function Header() {
 							}}
 						>
 							<LogOut />
-							Log Out
+							Sign Out
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
 			) : (
 				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button variant="ghost">
-							<Avatar>
-								<AvatarFallback>
-									<User className="text-destructive" />
-								</AvatarFallback>
-							</Avatar>
-							<p className="text-destructive">Signed Out</p>
-							<ChevronDown />
-						</Button>
-					</DropdownMenuTrigger>
+					<DropdownMenuTrigger
+						render={
+							<Button variant="ghost">
+								<Avatar>
+									<AvatarFallback>
+										<User className="text-destructive" />
+									</AvatarFallback>
+								</Avatar>
+								<p className="text-destructive">Signed Out</p>
+								<ChevronDown />
+							</Button>
+						}
+					/>
 					<DropdownMenuContent>
 						<DropdownMenuGroup>
 							<AppearanceDropdown />
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
-						<DropdownMenuItem asChild>
-							<Route.Link to="/auth/sign-in">
-								<LogIn />
-								Sign In
-							</Route.Link>
-						</DropdownMenuItem>
+						<DropdownMenuItem
+							render={
+								<Route.Link to="/auth/sign-in">
+									<LogIn />
+									Sign In
+								</Route.Link>
+							}
+						/>
 					</DropdownMenuContent>
 				</DropdownMenu>
 			)}

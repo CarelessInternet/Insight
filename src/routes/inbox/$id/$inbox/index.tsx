@@ -28,7 +28,9 @@ function RouteComponent() {
 			{!messageId && (
 				<>
 					<ResizableHandle withHandle />
-					<ResizablePanel id="message" defaultSize="50%" minSize="50%"></ResizablePanel>
+					<ResizablePanel id="message" defaultSize="50%" minSize="50%">
+						message content
+					</ResizablePanel>
 				</>
 			)}
 		</ResizablePanelGroup>

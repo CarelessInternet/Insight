@@ -78,11 +78,13 @@ export default function DeleteEmails({ rows }: { rows: EmailAccount[] }) {
 
 	return (
 		<AlertDialog open={open} onOpenChange={setOpen}>
-			<AlertDialogTrigger asChild>
-				<Button variant="destructive">
-					<MailX /> Delete Selected Emails
-				</Button>
-			</AlertDialogTrigger>
+			<AlertDialogTrigger
+				render={
+					<Button variant="destructive">
+						<MailX /> Delete Selected Emails
+					</Button>
+				}
+			/>
 			<AlertDialogContent size="sm">
 				<AlertDialogHeader>
 					<AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
