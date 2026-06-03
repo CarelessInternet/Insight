@@ -109,15 +109,7 @@ function RouteComponent() {
 					</SidebarFooter>
 				</Sidebar>
 				<main className="flex-1">
-					<Suspense
-						fallback={
-							<div className="size-full p-4">
-								<Skeleton className="size-full" />
-							</div>
-						}
-					>
-						<Outlet />
-					</Suspense>
+					<Outlet />
 				</main>
 			</div>
 		</SidebarProvider>

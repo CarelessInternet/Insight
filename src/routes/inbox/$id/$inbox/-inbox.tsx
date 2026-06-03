@@ -1,7 +1,5 @@
-import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
-import { and, eq } from 'drizzle-orm';
 import {
 	ArrowUpDown,
 	BellRing,
@@ -14,68 +12,21 @@ import {
 	StepBack,
 	StepForward,
 } from 'lucide-react';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, Suspense } from 'react';
 import { Button } from '~/components/ui/button';
 import { Field, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '~/components/ui/input-group';
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from '~/components/ui/popover';
-import { ScrollArea } from '~/components/ui/scroll-area';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select';
 import { Separator } from '~/components/ui/separator';
+import { Skeleton } from '~/components/ui/skeleton';
 import { Spinner } from '~/components/ui/spinner';
 import { Switch } from '~/components/ui/switch';
-import { database } from '~/lib/database/drizzle.server';
-import { emailAccount } from '~/lib/database/schema';
-import Email from '~/lib/email.server';
-import logger from '~/lib/logger.server';
-import { emailMiddleware } from '~/lib/middleware';
-import { type RouteSchema, routeSchema } from './-route.schema';
+import InboxMessages, { inboxOptions } from './-inbox.messages';
+import { type RouteSearchSchema, routeSearchSchema } from './-route.schema';
 
 const Route = getRouteApi('/inbox/$id/$inbox/');
-
-const fetchInbox = createServerFn({ method: 'GET' })
-	.inputValidator(routeSchema)
-	.middleware([emailMiddleware({ decrypt: true })])
-	.handler(async ({ context: { email, user }, data }) => {
-		await using imapEmail = new Email({
-			email: email.email,
-			hostname: email.hostname,
-			password: email.password,
-		});
-		await imapEmail.connect();
-
-		if (!imapEmail.authenticated) {
-			await database
-				.update(emailAccount)
-				.set({ status: 'invalid' })
-				.where(and(eq(emailAccount.userId, user.id), eq(emailAccount.id, email.id)));
-			throw Route.redirect({ to: '/account/settings' });
-		}
-
-		try {
-			const messages = await imapEmail.getPaginatedMailboxMessages(data.inbox);
-			logger.info('Fetched inbox emails for inbox:%s by user:%s', email.id, user.id);
-
-			return messages;
-		} catch (err) {
-			if (err instanceof Error && 'mailboxMissing' in err && err.mailboxMissing) {
-				throw Route.redirect({ to: '/inbox/$id/$inbox', params: { id: email.id, inbox: 'INBOX' } });
-			}
-
-			// TODO: display a proper failed state in the UI.
-			logger.warn('Fetching inbox emails failed: %s', err);
-			return [];
-		}
-	});
-
-export const inboxOptions = ({ id, inbox }: RouteSchema) =>
-	queryOptions({
-		queryKey: ['email-inbox-emails', id, inbox],
-		queryFn: () => fetchInbox({ data: { id, inbox } }),
-		// TODO: change to true
-		refetchOnWindowFocus: false,
-	});
 
 const sortByItems = {
 	descending: (
@@ -90,7 +41,7 @@ const sortByItems = {
 			Ascending
 		</>
 	),
-} as const satisfies Record<string, ReactNode>;
+} as const satisfies Record<RouteSearchSchema['sortBy'], ReactNode>;
 
 /*
 	TODO: Resizable component for email list and email message would be sick.
@@ -107,11 +58,11 @@ const sortByItems = {
 */
 export default function Inbox() {
 	const parameters = Route.useParams();
-	const { data: messages, isRefetching, refetch } = useSuspenseQuery(inboxOptions(parameters));
+	const { messageId: _, ...search } = Route.useSearch();
+	const navigate = Route.useNavigate();
 
-	const [sortBy, setSortBy] = useState<keyof typeof sortByItems | null>('ascending');
-	const [rowsPerPage, setRowsPerPage] = useState(25);
-	const [onlyUnreads, setOnlyUnreads] = useState(false);
+	const { isRefetching, refetch } = useQuery({ ...inboxOptions({ ...parameters, ...search }), select: () => null });
+	const page = search.offset / search.limit + 1;
 
 	// TODO: fix focus-visible not revealing all of the box shadow.
 	return (
@@ -147,7 +98,19 @@ export default function Inbox() {
 										<ArrowUpDown className="size-4" />
 										Sort By
 									</FieldLabel>
-									<Select items={sortByItems} value={sortBy} onValueChange={setSortBy}>
+									<Select
+										items={sortByItems}
+										value={search.sortBy}
+										onValueChange={(value) =>
+											navigate({
+												replace: true,
+												search: (previous) => ({
+													...previous,
+													sortBy: value ?? routeSearchSchema.shape.sortBy.def.defaultValue,
+												}),
+											})
+										}
+									>
 										<SelectTrigger id="sort-by" size="sm">
 											<SelectValue className="gap-2!" />
 										</SelectTrigger>
@@ -167,14 +130,31 @@ export default function Inbox() {
 										<ListOrdered className="size-4" />
 										Rows Per Page
 									</FieldLabel>
-									<Select value={String(rowsPerPage)} onValueChange={(value) => setRowsPerPage(Number(value))}>
+									<Select
+										items={Object.fromEntries(
+											routeSearchSchema.shape.limit
+												.unwrap()
+												.values.values()
+												.map((pageSize) => [pageSize, pageSize]),
+										)}
+										value={search.limit}
+										onValueChange={(value) =>
+											navigate({
+												replace: true,
+												search: (previous) => ({
+													...previous,
+													limit: value ?? routeSearchSchema.shape.limit.def.defaultValue,
+												}),
+											})
+										}
+									>
 										<SelectTrigger id="rows-per-page" size="sm">
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
 											<SelectGroup>
-												{[5, 10, 25, 50, 100].map((pageSize) => (
-													<SelectItem key={pageSize} value={`${pageSize}`}>
+												{[...routeSearchSchema.shape.limit.unwrap().values].map((pageSize) => (
+													<SelectItem key={pageSize} value={pageSize}>
 														{pageSize}
 													</SelectItem>
 												))}
@@ -187,7 +167,16 @@ export default function Inbox() {
 										<BellRing className="size-4" />
 										Only Unreads
 									</FieldLabel>
-									<Switch id="only-unreads" checked={onlyUnreads} onCheckedChange={setOnlyUnreads} />
+									<Switch
+										id="only-unreads"
+										checked={search.seen}
+										onCheckedChange={(seen) =>
+											navigate({
+												replace: true,
+												search: (previous) => ({ ...previous, seen }),
+											})
+										}
+									/>
 								</Field>
 							</PopoverContent>
 						</Popover>
@@ -201,17 +190,19 @@ export default function Inbox() {
 				</div>
 				<Separator />
 			</div>
-			<div className="grow overflow-y-auto">
-				<ScrollArea className="h-full">
-					<div className="flex flex-col gap-24">
-						{messages.map((message) => (
-							<div key={message.uid}>
-								<p>{message.envelope?.from?.map((recipient) => recipient.name).join(', ')}</p>
-								<p>{message.envelope?.subject}</p>
-							</div>
-						))}
-					</div>
-				</ScrollArea>
+			{/* The class "contents" allows the custom ScrollBar to appear. */}
+			<div className="contents grow *:h-full">
+				<Suspense
+					fallback={
+						<div className="flex flex-col gap-4 p-4">
+							{Array.from({ length: 10 }, () => (
+								<Skeleton key={crypto.randomUUID()} className="size-full" />
+							))}
+						</div>
+					}
+				>
+					<InboxMessages />
+				</Suspense>
 			</div>
 			<div className="flex-none">
 				<Separator />
@@ -222,7 +213,7 @@ export default function Inbox() {
 					</Button>
 					<Separator orientation="vertical" />
 					<span className="inline-flex grow flex-row place-content-center gap-2 px-2 text-sm">
-						Page <Input type="text" inputMode="numeric" className="h-5 w-10 px-2 text-sm" /> of 1
+						Page <Input type="text" inputMode="numeric" value={page} className="h-5 w-10 px-2 text-sm" /> of 1
 					</span>
 					<Separator orientation="vertical" />
 					<Button variant="ghost" className="grow rounded-none border-none">

@@ -106,7 +106,7 @@ interface EmailAccountsOptions {
 	userId: typeof auth.$Infer.Session.user.id;
 }
 
-export const defaultPagination: PaginationState = { pageIndex: 0, pageSize: 10 };
+export const defaultPagination = { pageIndex: 0, pageSize: 10 } satisfies PaginationState;
 const emailAccountQueryKey = 'email-settings-accounts' as const;
 
 export const invalidateEmailAccountsQueryKey = (userId: EmailAccountsOptions['userId']) => {
