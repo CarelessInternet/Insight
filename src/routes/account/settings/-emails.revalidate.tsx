@@ -97,7 +97,7 @@ export default function RevalidateEmails({ onRevalidated, rows }: { onRevalidate
 	});
 
 	return (
-		<Button variant="secondary" onClick={() => mutate()} disabled={isPending} aria-disabled={isPending}>
+		<Button variant="secondary" onClick={() => mutate()} disabled={isPending}>
 			{isPending ? <Spinner /> : <Wrench />}
 			Revalidate Selected Emails
 		</Button>

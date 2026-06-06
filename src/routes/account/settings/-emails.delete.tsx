@@ -97,12 +97,7 @@ export default function DeleteEmails({ rows }: { rows: EmailAccount[] }) {
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
-					<AlertDialogAction
-						variant="destructive"
-						onClick={() => mutate()}
-						disabled={isPending}
-						aria-disabled={isPending}
-					>
+					<AlertDialogAction variant="destructive" onClick={() => mutate()} disabled={isPending}>
 						{isPending ? <Spinner /> : <Trash />}
 						Delete
 					</AlertDialogAction>

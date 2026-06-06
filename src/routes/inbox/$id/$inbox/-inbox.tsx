@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
 import {
 	ArrowUpDown,
@@ -7,12 +7,14 @@ import {
 	CalendarArrowUp,
 	Filter,
 	ListOrdered,
+	PanelLeftClose,
+	PanelLeftOpen,
 	RefreshCcw,
 	Search,
 	StepBack,
 	StepForward,
 } from 'lucide-react';
-import { type ReactNode, Suspense } from 'react';
+import { type ReactNode, Suspense, useMemo } from 'react';
 import { Button } from '~/components/ui/button';
 import { Field, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
@@ -20,6 +22,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from '~/components/ui/in
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from '~/components/ui/popover';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select';
 import { Separator } from '~/components/ui/separator';
+import { useSidebar } from '~/components/ui/sidebar';
 import { Skeleton } from '~/components/ui/skeleton';
 import { Spinner } from '~/components/ui/spinner';
 import { Switch } from '~/components/ui/switch';
@@ -43,39 +46,39 @@ const sortByItems = {
 	),
 } as const satisfies Record<RouteSearchSchema['sortBy'], ReactNode>;
 
-/*
-	TODO: Resizable component for email list and email message would be sick.
-	UI:
-		1. Desktop only list: stretched table
-		2. Desktop list and message view: table and message view.
-		3. Mobile: list or message view.
-
-	Table should include a toggle sidebar and search buttons.
-
-	The resizeable component can make a panel disappear using the
-	collapsible/minSize property if the size becomes too small.
-	Use conditional panels to render a panel only if needed, useful for #1-3.
-*/
 export default function Inbox() {
 	const parameters = Route.useParams();
 	const { messageId: _, ...search } = Route.useSearch();
 	const navigate = Route.useNavigate();
 
-	const { isRefetching, refetch } = useQuery({ ...inboxOptions({ ...parameters, ...search }), select: () => null });
-	const page = search.offset / search.limit + 1;
+	const { openMobile, isMobile, toggleSidebar } = useSidebar();
+
+	const {
+		data: rowCount,
+		isRefetching,
+		refetch,
+	} = useQuery({
+		...inboxOptions({ ...parameters, ...search }),
+		select: ({ rowCount }) => rowCount,
+		placeholderData: keepPreviousData,
+	});
+	const pageCount = useMemo(
+		() => (rowCount ? Math.ceil(rowCount / search.rowsPerPage) : 1),
+		[rowCount, search.rowsPerPage],
+	);
 
 	// TODO: fix focus-visible not revealing all of the box shadow.
 	return (
 		<div className="@container flex h-full max-h-[calc(100dvh-var(--header-height))] flex-col overflow-hidden">
 			<div className="flex-none">
-				<div className="flex @sm:flex-row flex-col">
+				<div className="flex @md:flex-row flex-col">
 					<div className="flex flex-row">
-						<Button
-							className="grow rounded-none border-none"
-							onClick={() => refetch()}
-							disabled={isRefetching}
-							aria-disabled={isRefetching}
-						>
+						{isMobile && (
+							<Button variant="secondary" className="grow rounded-none border-none" onClick={toggleSidebar}>
+								{openMobile ? <PanelLeftOpen /> : <PanelLeftClose />} Sidebar
+							</Button>
+						)}
+						<Button className="grow rounded-none border-none" onClick={() => refetch()} disabled={isRefetching}>
 							{isRefetching ? <Spinner /> : <RefreshCcw />}
 							Refresh
 						</Button>
@@ -104,10 +107,10 @@ export default function Inbox() {
 										onValueChange={(value) =>
 											navigate({
 												replace: true,
-												search: (previous) => ({
-													...previous,
+												search: {
+													page: 1,
 													sortBy: value ?? routeSearchSchema.shape.sortBy.def.defaultValue,
-												}),
+												},
 											})
 										}
 									>
@@ -132,19 +135,19 @@ export default function Inbox() {
 									</FieldLabel>
 									<Select
 										items={Object.fromEntries(
-											routeSearchSchema.shape.limit
+											routeSearchSchema.shape.rowsPerPage
 												.unwrap()
 												.values.values()
 												.map((pageSize) => [pageSize, pageSize]),
 										)}
-										value={search.limit}
+										value={search.rowsPerPage}
 										onValueChange={(value) =>
 											navigate({
 												replace: true,
-												search: (previous) => ({
-													...previous,
-													limit: value ?? routeSearchSchema.shape.limit.def.defaultValue,
-												}),
+												search: {
+													page: 1,
+													rowsPerPage: value ?? routeSearchSchema.shape.rowsPerPage.def.defaultValue,
+												},
 											})
 										}
 									>
@@ -153,7 +156,7 @@ export default function Inbox() {
 										</SelectTrigger>
 										<SelectContent>
 											<SelectGroup>
-												{[...routeSearchSchema.shape.limit.unwrap().values].map((pageSize) => (
+												{[...routeSearchSchema.shape.rowsPerPage.unwrap().values].map((pageSize) => (
 													<SelectItem key={pageSize} value={pageSize}>
 														{pageSize}
 													</SelectItem>
@@ -169,11 +172,11 @@ export default function Inbox() {
 									</FieldLabel>
 									<Switch
 										id="only-unreads"
-										checked={search.seen}
+										checked={!search.seen}
 										onCheckedChange={(seen) =>
 											navigate({
 												replace: true,
-												search: (previous) => ({ ...previous, seen }),
+												search: { page: 1, seen: !seen },
 											})
 										}
 									/>
@@ -207,16 +210,56 @@ export default function Inbox() {
 			<div className="flex-none">
 				<Separator />
 				<div className="flex flex-row items-center">
-					<Button variant="ghost" className="grow rounded-none border-none">
+					<Button
+						variant="ghost"
+						className="grow rounded-none border-none"
+						disabled={isRefetching || search.page === 1}
+						onClick={() =>
+							navigate({
+								replace: true,
+								search: { page: search.page - 1 },
+							})
+						}
+					>
 						<StepBack />
 						<span className="@sm:inline-block hidden">Previous</span>
 					</Button>
 					<Separator orientation="vertical" />
 					<span className="inline-flex grow flex-row place-content-center gap-2 px-2 text-sm">
-						Page <Input type="text" inputMode="numeric" value={page} className="h-5 w-10 px-2 text-sm" /> of 1
+						Page
+						<Input
+							type="text"
+							inputMode="numeric"
+							className="h-5 w-10 px-2 text-sm"
+							disabled={isRefetching || rowCount === 0}
+							value={search.page}
+							onValueChange={(rawPage, event) => {
+								const page = Number(rawPage);
+
+								if (page > pageCount || page < 1) {
+									return event.cancel();
+								}
+
+								navigate({
+									replace: true,
+									search: { page },
+								});
+							}}
+						/>
+						of {pageCount}
 					</span>
 					<Separator orientation="vertical" />
-					<Button variant="ghost" className="grow rounded-none border-none">
+					<Button
+						variant="ghost"
+						className="grow rounded-none border-none"
+						disabled={isRefetching || search.page === pageCount}
+						onClick={() =>
+							navigate({
+								replace: true,
+								search: { page: search.page + 1 },
+							})
+						}
+					>
 						<span className="@sm:inline-block hidden">Next</span>
 						<StepForward />
 					</Button>

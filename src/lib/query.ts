@@ -7,7 +7,7 @@ import z from 'zod';
 let queryClient: QueryClient;
 
 const options = {
-	defaultOptions: { queries: { staleTime: 60 * 1000 } },
+	defaultOptions: { queries: { staleTime: 60 * 1000, refetchOnWindowFocus: false } },
 } satisfies QueryClientConfig;
 
 const getQueryClient = createIsomorphicFn()

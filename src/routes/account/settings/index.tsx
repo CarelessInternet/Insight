@@ -7,7 +7,6 @@ import { Skeleton } from '~/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableRow } from '~/components/ui/table';
 import authClient from '~/lib/authentication/client';
 import auth from '~/lib/authentication/server';
-import { getSession } from '~/lib/middleware';
 import EmailAccounts, { defaultPagination, emailAccountsOptions } from './-email.table';
 import Passkey from './-passkey';
 
@@ -25,7 +24,6 @@ const getUserData = createIsomorphicFn()
 
 export const Route = createFileRoute('/account/settings/')({
 	component: RouteComponent,
-	beforeLoad: async () => ({ ...(await getSession()) }),
 	loader: async ({ context: { queryClient, user } }) => {
 		if (!user) {
 			throw Route.redirect({ to: '/auth/sign-in' });

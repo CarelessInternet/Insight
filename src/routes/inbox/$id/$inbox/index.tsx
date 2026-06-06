@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, retainSearchParams } from '@tanstack/react-router';
 import { createIsomorphicFn } from '@tanstack/react-start';
 import { getCookie, setCookie } from '@tanstack/react-start/server';
 import { type LayoutStorage, useDefaultLayout } from 'react-resizable-panels';
@@ -7,23 +7,26 @@ import { useSidebar } from '~/components/ui/sidebar';
 import { useIsMobile } from '~/lib/hooks/use-mobile';
 import Inbox from './-inbox';
 import { inboxOptions } from './-inbox.messages';
+import InboxMessage, { inboxMessageOptions } from './-message';
 import { routeSchema, searchSchema } from './-route.schema';
 
 export const Route = createFileRoute('/inbox/$id/$inbox/')({
 	component: RouteComponent,
-	loaderDeps: ({ search: { messageId, ...deps } }) => deps,
-	loader: ({ context: { queryClient }, params, deps }) =>
-		void queryClient.prefetchQuery(inboxOptions({ ...params, ...deps })),
+	loaderDeps: ({ search }) => search,
+	loader: ({ context: { queryClient }, params, deps: { messageId, ...search } }) => {
+		void queryClient.prefetchQuery(inboxOptions({ ...params, ...search }));
+
+		if (messageId !== undefined) {
+			void queryClient.prefetchQuery(inboxMessageOptions({ ...params, messageId }));
+		}
+	},
 	params: {
 		parse: routeSchema.parse,
 	},
 	validateSearch: searchSchema,
-	// retainSearchParams does not currently work.
-	// That's why each navigation requires passing the previous search parameters.
-	// https://github.com/TanStack/router/issues/2845
-	// search: {
-	// 	middlewares: [retainSearchParams(true)],
-	// },
+	search: {
+		middlewares: [retainSearchParams(searchSchema.omit({ messageId: true, page: true }).keyof().options)],
+	},
 });
 
 const getPanelConfiguration = createIsomorphicFn()
@@ -60,9 +63,12 @@ function RouteComponent() {
 	const isMobile = useIsMobile();
 	const { open } = useSidebar();
 
+	const inboxPanelId = 'inbox';
+	const messagePanelId = 'message';
 	const { defaultLayout, onLayoutChanged } = useDefaultLayout({
 		id: 'inbox-layout',
 		storage: cookieStorage,
+		panelIds: [inboxPanelId, messagePanelId],
 	});
 
 	return (
@@ -71,14 +77,19 @@ function RouteComponent() {
 			defaultLayout={defaultLayout}
 			onLayoutChanged={onLayoutChanged}
 		>
-			<ResizablePanel id="inbox" defaultSize={messageId ? '25%' : '50%'} minSize={open ? '30%' : '25%'} collapsible>
+			<ResizablePanel
+				id={inboxPanelId}
+				defaultSize={messageId ? '25%' : '50%'}
+				minSize={open ? '30%' : '25%'}
+				collapsible
+			>
 				<Inbox />
 			</ResizablePanel>
 			{messageId && (
 				<>
 					<ResizableHandle withHandle />
-					<ResizablePanel id="message" defaultSize="75%" minSize="50%">
-						{messageId}
+					<ResizablePanel id={messagePanelId} defaultSize="75%" minSize="50%">
+						<InboxMessage messageId={messageId} />
 					</ResizablePanel>
 				</>
 			)}

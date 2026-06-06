@@ -45,7 +45,6 @@ export const accountsOptions = (id: EmailId) =>
 	queryOptions({
 		queryKey: ['email-inbox-accounts', id],
 		queryFn: () => fetchAccounts({ data: id }),
-		refetchOnWindowFocus: false,
 	});
 
 export default function SidebarEmailAccounts() {
@@ -61,7 +60,7 @@ export default function SidebarEmailAccounts() {
 					<SidebarMenuButton size="lg" className="group-data-[collapsible=icon]:p-0!">
 						<Mailbox className="size-8! text-primary" />
 						<div className="grid flex-1 text-left text-base leading-tight">
-							<span className="truncate font-bold">{currentEmail?.label ?? currentEmail?.email}</span>
+							<span className="truncate font-bold">{currentEmail?.label || currentEmail?.email}</span>
 							<span className="truncate text-xs">
 								{currentEmail?.label ? currentEmail.email : currentEmail?.hostname}
 							</span>
@@ -86,7 +85,7 @@ export default function SidebarEmailAccounts() {
 												<MailWarning className="text-destructive" />
 											)}
 											<div className="grid flex-1 text-left leading-tight">
-												<span className="truncate font-bold text-md">{email.label ?? email.email}</span>
+												<span className="truncate font-bold text-md">{email.label || email.email}</span>
 												<span className="truncate text-xs">{email.label ? email.email : email.hostname}</span>
 											</div>
 										</Route.Link>

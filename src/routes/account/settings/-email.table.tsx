@@ -109,16 +109,14 @@ interface EmailAccountsOptions {
 export const defaultPagination = { pageIndex: 0, pageSize: 10 } satisfies PaginationState;
 const emailAccountQueryKey = 'email-settings-accounts' as const;
 
-export const invalidateEmailAccountsQueryKey = (userId: EmailAccountsOptions['userId']) => {
-	return [emailAccountQueryKey, { userId } satisfies Partial<EmailAccountsOptions>] satisfies QueryKey;
-};
+export const invalidateEmailAccountsQueryKey = (userId: EmailAccountsOptions['userId']) =>
+	[emailAccountQueryKey, { userId } satisfies Partial<EmailAccountsOptions>] satisfies QueryKey;
 
 export const emailAccountsOptions = (parameters: EmailAccountsOptions) =>
 	queryOptions({
 		queryKey: [emailAccountQueryKey, parameters],
 		queryFn: () =>
 			fetchEmailAccounts({ data: { limit: parameters.pagination.pageSize, offset: parameters.pagination.pageIndex } }),
-		refetchOnWindowFocus: false,
 	});
 
 type RowAction = 'edit' | 'delete' | null;

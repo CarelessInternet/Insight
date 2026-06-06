@@ -46,14 +46,19 @@ export const setAppearance = createClientOnlyFn((data: Appearance) =>
 	localStorage.setItem(storageKey, appearance.encode(data)),
 );
 
-export const appearanceScript = `
-	const storage = localStorage.getItem('${storageKey}');
-	const appearance = storage ? JSON.parse(storage) : ${JSON.stringify(defaultAppearance)};
-	const dark = appearance.theme === 'system'
-		? matchMedia('(prefers-color-scheme: dark)').matches
-		: appearance.theme === 'dark';
+function appearanceScriptCode(storageKey: string, defaultAppearance: Appearance) {
+	const storage = localStorage.getItem(storageKey);
+	const appearance = storage ? JSON.parse(storage) : defaultAppearance;
+
+	const dark =
+		appearance.theme === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : appearance.theme === 'dark';
 
 	const root = document.documentElement;
 	root.dataset.palette = appearance.palette;
 	root.classList.toggle('dark', dark);
-`;
+}
+
+export const appearanceScript = `(${appearanceScriptCode})(
+	${JSON.stringify(storageKey)},
+	${JSON.stringify(defaultAppearance)}
+)`;

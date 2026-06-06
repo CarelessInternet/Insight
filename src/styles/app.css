@@ -254,6 +254,7 @@
 	--sidebar-ring: oklch(0.723 0.014 214.4);
 }
 
+/* Slightly adjusted primary values. */
 :root[data-palette="sky"].dark {
 	--background: oklch(0.148 0.004 228.8);
 	--foreground: oklch(0.987 0.002 197.1);
@@ -261,7 +262,7 @@
 	--card-foreground: oklch(0.987 0.002 197.1);
 	--popover: oklch(0.218 0.008 223.9);
 	--popover-foreground: oklch(0.987 0.002 197.1);
-	--primary: oklch(0.443 0.11 240.79);
+	--primary: oklch(53.858% 0.12556 241.783);
 	--primary-foreground: oklch(0.977 0.013 236.62);
 	--secondary: oklch(0.274 0.006 286.033);
 	--secondary-foreground: oklch(0.985 0 0);
@@ -280,8 +281,8 @@
 	--chart-5: oklch(0.443 0.11 240.79);
 	--sidebar: oklch(0.218 0.008 223.9);
 	--sidebar-foreground: oklch(0.987 0.002 197.1);
-	--sidebar-primary: oklch(0.685 0.169 237.323);
-	--sidebar-primary-foreground: oklch(0.293 0.066 243.157);
+	--sidebar-primary: oklch(68.079% 0.15187 239.012);
+	--sidebar-primary-foreground: oklch(0.977 0.013 236.62);
 	--sidebar-accent: oklch(0.275 0.011 216.9);
 	--sidebar-accent-foreground: oklch(0.987 0.002 197.1);
 	--sidebar-border: oklch(1 0 0 / 10%);

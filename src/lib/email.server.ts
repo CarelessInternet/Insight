@@ -1,8 +1,15 @@
 import { ImapFlow } from 'imapflow';
 import type z from 'zod';
 import { decrypt } from './crypto.server';
-import type { EmailCredentialsSchema, paginatedEmailMessagesSchema } from './email';
+import {
+	type EmailCredentialsSchema,
+	inbox as emailInbox,
+	getMessageSchema,
+	paginatedEmailMessagesSchema,
+	setMessageFlagsSchema,
+} from './email';
 import logger from './logger.server';
+import type { PaginatedQueryResult } from './query';
 
 export default class Email implements AsyncDisposable {
 	private client: ImapFlow;
@@ -42,8 +49,9 @@ export default class Email implements AsyncDisposable {
 		}
 	}
 
-	private async getMailbox(inbox: string) {
-		const lock = await this.client.getMailboxLock(inbox, { readOnly: true });
+	private async getMailbox(parameter: z.infer<typeof emailInbox>) {
+		const inbox = emailInbox.parse(parameter);
+		const lock = await this.client.getMailboxLock(inbox, { readOnly: false });
 
 		return {
 			[Symbol.dispose]() {
@@ -56,42 +64,52 @@ export default class Email implements AsyncDisposable {
 		return await this.client.listTree();
 	}
 
-	public async getPaginatedMailboxMessages({
-		inbox,
-		limit,
-		offset,
-		sortBy,
-		seen,
-	}: z.infer<typeof paginatedEmailMessagesSchema>) {
+	public async getPaginatedMailboxMessages(parameters: z.infer<typeof paginatedEmailMessagesSchema>) {
+		const { inbox, page, rowsPerPage, sortBy, seen } = paginatedEmailMessagesSchema.parse(parameters);
+
+		const limit = Math.max(1, rowsPerPage);
+		const offset = Math.max(0, (Math.max(1, page) - 1) * limit);
+
 		using _ = await this.getMailbox(inbox);
-		const amount = (this.client.mailbox || null)?.exists ?? 0;
+		const uids = (await this.client.search(!seen ? { seen } : { all: true }, { uid: true })) || [];
 
-		if (amount === 0 || offset >= amount) {
-			return [];
+		if (uids.length === 0 || offset >= uids.length) {
+			return { data: [], rowCount: 0 } satisfies PaginatedQueryResult<typeof data>;
 		}
 
-		const end = sortBy === 'descending' ? amount - offset : Math.min(amount, offset + limit);
-		const start = sortBy === 'descending' ? Math.max(1, end - limit + 1) : offset + 1;
-
-		if (!seen) {
-			const messages = await this.client.fetchAll(`${start}:${end}`, { envelope: true, flags: true });
-
-			return messages.sort((a, b) => (sortBy === 'ascending' ? a.uid - b.uid : b.uid - a.uid));
-		}
-
-		const uids = (await this.client.search({ seen }, { uid: true })) || [];
-		const page = uids.sort((a, b) => b - a).slice(offset, offset + limit);
+		const orderedUids = uids.sort((a, b) => (sortBy === 'ascending' ? a - b : b - a));
+		const pageUids = orderedUids.slice(offset, offset + limit);
 
 		const messages = await this.client.fetchAll(
-			page,
+			pageUids,
 			{
 				envelope: true,
 				flags: true,
 			},
 			{ uid: true },
 		);
+		const data = messages.sort((a, b) => (sortBy === 'ascending' ? a.uid - b.uid : b.uid - a.uid));
 
-		return messages;
+		return { data, rowCount: uids.length } satisfies PaginatedQueryResult<typeof data>;
+	}
+
+	public async getMessage(parameters: z.infer<typeof getMessageSchema>) {
+		const { inbox, messageId } = getMessageSchema.parse(parameters);
+		using _ = await this.getMailbox(inbox);
+
+		const message = await this.client.fetchOne(
+			messageId,
+			{ bodyStructure: true, envelope: true, flags: true, internalDate: true, size: true },
+			{ uid: true },
+		);
+		return message || null;
+	}
+
+	public async addMessageFlags(parameters: z.infer<typeof setMessageFlagsSchema>) {
+		const { flags, inbox, messageId } = setMessageFlagsSchema.parse(parameters);
+		using _ = await this.getMailbox(inbox);
+
+		return await this.client.messageFlagsAdd(messageId, [...flags], { uid: true });
 	}
 
 	public async [Symbol.asyncDispose]() {

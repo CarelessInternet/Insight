@@ -186,7 +186,7 @@ function RouteComponent() {
 									<Field>
 										<form.Subscribe selector={(formState) => [formState.canSubmit, formState.isSubmitting]}>
 											{([canSubmit, isSubmitting]) => (
-												<Button type="submit" disabled={!canSubmit} aria-disabled={!canSubmit}>
+												<Button type="submit" disabled={!canSubmit}>
 													{isSubmitting ? <Spinner /> : <UserPlus />}
 													Create Account
 												</Button>

@@ -52,7 +52,6 @@ export const foldersOptions = (id: EmailId) =>
 	queryOptions({
 		queryKey: ['email-inbox-folders', id],
 		queryFn: () => fetchFolders({ data: { id } }),
-		refetchOnWindowFocus: false,
 	});
 
 export default function SidebarFolders() {
