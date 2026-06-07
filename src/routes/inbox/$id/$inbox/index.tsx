@@ -1,14 +1,22 @@
 import { createFileRoute, retainSearchParams } from '@tanstack/react-router';
 import { createIsomorphicFn } from '@tanstack/react-start';
-import { getCookie, setCookie } from '@tanstack/react-start/server';
-import { type LayoutStorage, useDefaultLayout } from 'react-resizable-panels';
+import { getRequestHeader } from '@tanstack/react-start/server';
+import { useDefaultLayout } from 'react-resizable-panels';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '~/components/ui/resizable';
 import { useSidebar } from '~/components/ui/sidebar';
-import { useIsMobile } from '~/lib/hooks/use-mobile';
+import { getIsomorphicCookie, setIsomorphicCookie } from '~/lib/cookie';
+import { isClientMobile, isWidthMobile, useIsMobile } from '~/lib/hooks/use-mobile';
 import Inbox from './-inbox';
 import { inboxOptions } from './-inbox.messages';
 import InboxMessage, { inboxMessageOptions } from './-message';
 import { routeSchema, searchSchema } from './-route.schema';
+
+export const isIsomorphicMobile = createIsomorphicFn()
+	.server(() => {
+		const viewportWidth = getRequestHeader('Sec-CH-Viewport-Width');
+		return viewportWidth !== undefined ? isWidthMobile(Number(viewportWidth)) : null;
+	})
+	.client(isClientMobile);
 
 export const Route = createFileRoute('/inbox/$id/$inbox/')({
 	component: RouteComponent,
@@ -19,56 +27,40 @@ export const Route = createFileRoute('/inbox/$id/$inbox/')({
 		if (messageId !== undefined) {
 			void queryClient.prefetchQuery(inboxMessageOptions({ ...params, messageId }));
 		}
+
+		return isIsomorphicMobile();
 	},
 	params: {
 		parse: routeSchema.parse,
 	},
 	validateSearch: searchSchema,
 	search: {
-		middlewares: [retainSearchParams(searchSchema.omit({ messageId: true, page: true }).keyof().options)],
+		middlewares: [
+			retainSearchParams(
+				searchSchema.pick({ rowsPerPage: true, search: true, seen: true, sortBy: true }).keyof().options,
+			),
+		],
 	},
 });
 
-const getPanelConfiguration = createIsomorphicFn()
-	.client((key: string) => {
-		const cookies = document.cookie.split(';');
-
-		for (const cookie of cookies) {
-			const [name, value] = cookie.trim().split('=');
-
-			if (name === key) {
-				return value ?? null;
-			}
-		}
-
-		return null;
-	})
-	.server((key: string) => getCookie(key) ?? null);
-
-const setPanelConfiguration = createIsomorphicFn()
-	.client((key: string, value: string) => {
-		// biome-ignore lint/suspicious/noDocumentCookie: Cannot use cookieStore because it must be synchronous.
-		document.cookie = `${key}=${value}; path=/;`;
-	})
-	.server((key: string, value: string) => setCookie(key, value));
-
-// https://react-resizable-panels.vercel.app/examples/persistent-layout/server-rendering
-const cookieStorage: LayoutStorage = {
-	getItem: (key) => getPanelConfiguration(key),
-	setItem: (key, value) => setPanelConfiguration(key, value),
-};
-
 function RouteComponent() {
 	const { messageId } = Route.useSearch();
-	const isMobile = useIsMobile();
 	const { open } = useSidebar();
+
+	const isRenderedMobile = useIsMobile();
+	const isIsomorphicMobile = Route.useLoaderData();
+	const isMobile = isIsomorphicMobile || isRenderedMobile;
 
 	const inboxPanelId = 'inbox';
 	const messagePanelId = 'message';
+	// https://react-resizable-panels.vercel.app/examples/persistent-layout/server-rendering
 	const { defaultLayout, onLayoutChanged } = useDefaultLayout({
 		id: 'inbox-layout',
-		storage: cookieStorage,
-		panelIds: [inboxPanelId, messagePanelId],
+		storage: {
+			getItem: getIsomorphicCookie,
+			setItem: (name, value) => setIsomorphicCookie({ name, value }),
+		},
+		panelIds: messageId ? [inboxPanelId, messagePanelId] : [inboxPanelId],
 	});
 
 	return (
@@ -79,7 +71,7 @@ function RouteComponent() {
 		>
 			<ResizablePanel
 				id={inboxPanelId}
-				defaultSize={messageId ? '25%' : '50%'}
+				defaultSize={messageId ? '50%' : '100%'}
 				minSize={open ? '30%' : '25%'}
 				collapsible
 			>
@@ -88,7 +80,7 @@ function RouteComponent() {
 			{messageId && (
 				<>
 					<ResizableHandle withHandle />
-					<ResizablePanel id={messagePanelId} defaultSize="75%" minSize="50%">
+					<ResizablePanel id={messagePanelId} defaultSize={isMobile ? '100%' : '75%'} minSize="50%">
 						<InboxMessage messageId={messageId} />
 					</ResizablePanel>
 				</>

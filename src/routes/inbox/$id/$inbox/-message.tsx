@@ -15,7 +15,7 @@ import { type RouteMessageSchema, routeMessageSchema } from './-route.schema';
 const Route = getRouteApi('/inbox/$id/$inbox/');
 
 const fetchInboxMessage = createServerFn({ method: 'GET' })
-	.inputValidator(routeMessageSchema)
+	.validator(routeMessageSchema)
 	.middleware([emailMiddleware({ decrypt: true })])
 	.handler(async ({ context: { email, user }, data: { inbox, messageId } }) => {
 		await using imapEmail = new Email({
@@ -35,7 +35,7 @@ const fetchInboxMessage = createServerFn({ method: 'GET' })
 
 		try {
 			const message = await imapEmail.getMessage({ inbox, messageId });
-			logger.info('Fetched inbox email message for inbox:%s by user:%s', email.id, user.id);
+			logger.verbose('Fetched inbox email message for inbox:%s by user:%s', email.id, user.id);
 
 			return message;
 		} catch (err) {
@@ -43,9 +43,8 @@ const fetchInboxMessage = createServerFn({ method: 'GET' })
 				throw Route.redirect({ to: '/inbox/$id/$inbox', params: { id: email.id, inbox: 'INBOX' } });
 			}
 
-			// TODO: display a proper failed state in the UI.
 			logger.warn('Fetching inbox email message failed: %s', err);
-			return null;
+			throw err;
 		}
 	});
 
@@ -56,7 +55,7 @@ export const inboxMessageOptions = (data: RouteMessageSchema) =>
 	});
 
 const markMessageAsReadFn = createServerFn({ method: 'POST' })
-	.inputValidator(routeMessageSchema)
+	.validator(routeMessageSchema)
 	.middleware([emailMiddleware({ decrypt: true })])
 	.handler(async ({ context: { email, user }, data: { inbox, messageId } }) => {
 		await using imapEmail = new Email({
@@ -117,6 +116,7 @@ function MessageContent({ messageId }: { messageId: RouteMessageSchema['messageI
 	const currentMessageId = useRef(messageId);
 	const shouldRevalidate = useRef(false);
 
+	// Moving handleMarkAsRead to a useEffectEvent broke the intended behaviour.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Only revalidate if messageId changes.
 	useEffect(() => {
 		async function handleMarkAsRead() {

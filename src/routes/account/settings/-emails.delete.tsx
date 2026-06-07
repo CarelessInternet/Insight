@@ -31,7 +31,7 @@ const Route = getRouteApi('/account/settings/');
 
 const deleteEmailsFn = createServerFn({ method: 'POST' })
 	.middleware([sessionMiddleware])
-	.inputValidator(z.array(emailAccountSelectSchema.shape.id))
+	.validator(z.array(emailAccountSelectSchema.shape.id))
 	.handler(async ({ context, data: ids }) => {
 		try {
 			const emails = await database
@@ -40,7 +40,7 @@ const deleteEmailsFn = createServerFn({ method: 'POST' })
 				.returning();
 
 			if (emails.length > 0) {
-				logger.info(
+				logger.verbose(
 					'%s email accounts (%s) deleted by user:%s',
 					emails.length,
 					emails.map((email) => email.id).join(', '),
@@ -81,7 +81,7 @@ export default function DeleteEmails({ rows }: { rows: EmailAccount[] }) {
 			<AlertDialogTrigger
 				render={
 					<Button variant="destructive">
-						<MailX /> Delete Selected Emails
+						<MailX data-icon="inline-start" /> Delete Selected Emails
 					</Button>
 				}
 			/>
@@ -98,7 +98,7 @@ export default function DeleteEmails({ rows }: { rows: EmailAccount[] }) {
 				<AlertDialogFooter>
 					<AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
 					<AlertDialogAction variant="destructive" onClick={() => mutate()} disabled={isPending}>
-						{isPending ? <Spinner /> : <Trash />}
+						{isPending ? <Spinner data-icon="inline-start" /> : <Trash data-icon="inline-start" />}
 						Delete
 					</AlertDialogAction>
 				</AlertDialogFooter>

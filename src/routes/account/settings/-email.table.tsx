@@ -68,7 +68,7 @@ const Route = getRouteApi('/account/settings/');
 
 const fetchEmailAccounts = createServerFn({ method: 'GET' })
 	.middleware([sessionMiddleware])
-	.inputValidator(paginatedQuery)
+	.validator(paginatedQuery)
 	.handler(
 		async ({
 			context: {
@@ -330,50 +330,48 @@ export default function EmailAccountsTable() {
 	return (
 		<div className="flex w-3/4 flex-col gap-2">
 			<div className="flex flex-col justify-between sm:flex-row">
-				<ButtonGroup>
-					<ButtonGroup className="max-w-full">
-						<InputGroup>
-							<InputGroupAddon align="inline-start">
-								<MailSearch />
-							</InputGroupAddon>
-							<InputGroupInput
-								type="email"
-								placeholder="Filter emails..."
-								value={(table.getColumn('email')?.getFilterValue() as string) ?? ''}
-								onChange={(event) => table.getColumn('email')?.setFilterValue(event.target.value)}
-							/>
-							<InputGroupAddon align="inline-end">
-								<DropdownMenu>
-									<DropdownMenuTrigger
-										render={
-											<InputGroupButton variant="outline">
-												<Columns3Cog />
-												Columns
-												<ChevronDown />
-											</InputGroupButton>
-										}
-									/>
-									<DropdownMenuContent align="end">
-										{table
-											.getAllColumns()
-											.filter((column) => column.getCanHide())
-											.map((column) => {
-												return (
-													<DropdownMenuCheckboxItem
-														key={column.id}
-														className="capitalize"
-														checked={column.getIsVisible()}
-														onCheckedChange={(value) => column.toggleVisibility(!!value)}
-													>
-														{column.id}
-													</DropdownMenuCheckboxItem>
-												);
-											})}
-									</DropdownMenuContent>
-								</DropdownMenu>
-							</InputGroupAddon>
-						</InputGroup>
-					</ButtonGroup>
+				<ButtonGroup className="max-w-full">
+					<InputGroup>
+						<InputGroupAddon align="inline-start">
+							<MailSearch />
+						</InputGroupAddon>
+						<InputGroupInput
+							type="email"
+							placeholder="Filter emails..."
+							value={(table.getColumn('email')?.getFilterValue() as string) ?? ''}
+							onChange={(event) => table.getColumn('email')?.setFilterValue(event.target.value)}
+						/>
+						<InputGroupAddon align="inline-end">
+							<DropdownMenu>
+								<DropdownMenuTrigger
+									render={
+										<InputGroupButton variant="secondary">
+											<Columns3Cog data-icon="inline-start" />
+											Columns
+											<ChevronDown data-icon="inline-end" />
+										</InputGroupButton>
+									}
+								/>
+								<DropdownMenuContent align="end">
+									{table
+										.getAllColumns()
+										.filter((column) => column.getCanHide())
+										.map((column) => {
+											return (
+												<DropdownMenuCheckboxItem
+													key={column.id}
+													className="capitalize"
+													checked={column.getIsVisible()}
+													onCheckedChange={(value) => column.toggleVisibility(!!value)}
+												>
+													{column.id}
+												</DropdownMenuCheckboxItem>
+											);
+										})}
+								</DropdownMenuContent>
+							</DropdownMenu>
+						</InputGroupAddon>
+					</InputGroup>
 				</ButtonGroup>
 				<div className="flex items-center justify-between gap-4">
 					<Field orientation="horizontal" className="w-fit">

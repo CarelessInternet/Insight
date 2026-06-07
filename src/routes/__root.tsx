@@ -23,6 +23,10 @@ interface RouterContext {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
 	head: () => ({
+		links: [
+			{ rel: 'stylesheet', href: appCss },
+			{ rel: 'icon', type: 'image/png', href: '/insight.png' },
+		],
 		meta: [
 			{
 				charSet: 'utf-8',
@@ -34,10 +38,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 			{
 				title: 'Insight',
 			},
-		],
-		links: [
-			{ rel: 'stylesheet', href: appCss },
-			{ rel: 'icon', type: 'image/png', href: '/insight.png' },
 		],
 	}),
 	beforeLoad: async () => ({ ...(await getSession()) }),

@@ -88,7 +88,12 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 					<CollapsibleTrigger
 						render={
 							<SidebarMenuButton isActive={isActive}>
-								<Route.Link to="/inbox/$id/$inbox" params={{ id, inbox: folder.path }} className="contents">
+								<Route.Link
+									to="/inbox/$id/$inbox"
+									params={{ id, inbox: folder.path }}
+									search={{ search: undefined }}
+									className="contents"
+								>
 									{folder.specialUse === '\\Inbox' ? FolderIcon({ specialUse: folder.specialUse }) : <Folder />}
 									{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
 								</Route.Link>
@@ -118,7 +123,7 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 				className="py-4.5"
 				isActive={isActive}
 				render={
-					<Route.Link to="/inbox/$id/$inbox" params={{ id, inbox: folder.path }}>
+					<Route.Link to="/inbox/$id/$inbox" params={{ id, inbox: folder.path }} search={{ search: undefined }}>
 						<FolderIcon specialUse={folder.specialUse} />
 						{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
 					</Route.Link>

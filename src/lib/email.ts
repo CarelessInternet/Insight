@@ -20,10 +20,17 @@ export const messageId = z.number();
 
 export const getMessageSchema = z.object({ inbox, messageId });
 
+export const searchMessageSchema = z.object({
+	value: z.string(),
+	filterBy: z.enum(['from', 'subject', 'content']).default('subject'),
+});
+export const searchMessageFilters = searchMessageSchema.shape.filterBy.unwrap().enum;
+
 export const paginatedEmailMessagesSchema = z.object({
 	inbox,
 	page: z.number().gte(1).default(1),
 	rowsPerPage: z.literal([5, 10, 25, 50, 100]).default(25),
+	search: searchMessageSchema.optional(),
 	seen: z.boolean().default(true),
 	sortBy: z.enum(['ascending', 'descending']).default('descending'),
 });

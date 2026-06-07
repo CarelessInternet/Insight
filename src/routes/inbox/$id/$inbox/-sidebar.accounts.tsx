@@ -22,7 +22,7 @@ const Route = getRouteApi('/inbox/$id/$inbox/');
 
 const fetchAccounts = createServerFn({ method: 'GET' })
 	.middleware([sessionMiddleware])
-	.inputValidator(emailMiddlewareSchema.shape.id)
+	.validator(emailMiddlewareSchema.shape.id)
 	.handler(async ({ context: { user } }) => {
 		let emails = await database.query.emailAccount.findMany({
 			columns: { email: true, hostname: true, id: true, label: true, status: true },

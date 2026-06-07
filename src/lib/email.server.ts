@@ -1,4 +1,4 @@
-import { ImapFlow } from 'imapflow';
+import { ImapFlow, type SearchObject } from 'imapflow';
 import type z from 'zod';
 import { decrypt } from './crypto.server';
 import {
@@ -6,6 +6,7 @@ import {
 	inbox as emailInbox,
 	getMessageSchema,
 	paginatedEmailMessagesSchema,
+	type searchMessageFilters,
 	setMessageFlagsSchema,
 } from './email';
 import logger from './logger.server';
@@ -65,13 +66,26 @@ export default class Email implements AsyncDisposable {
 	}
 
 	public async getPaginatedMailboxMessages(parameters: z.infer<typeof paginatedEmailMessagesSchema>) {
-		const { inbox, page, rowsPerPage, sortBy, seen } = paginatedEmailMessagesSchema.parse(parameters);
+		const { inbox, page, rowsPerPage, search, seen, sortBy } = paginatedEmailMessagesSchema.parse(parameters);
 
 		const limit = Math.max(1, rowsPerPage);
 		const offset = Math.max(0, (Math.max(1, page) - 1) * limit);
 
 		using _ = await this.getMailbox(inbox);
-		const uids = (await this.client.search(!seen ? { seen } : { all: true }, { uid: true })) || [];
+		// Seen: false = only unreads, otherwise all messages.
+		const searchParameters: SearchObject = seen ? { all: true } : { seen };
+
+		const searchParametersMap = { content: 'body', from: 'from', subject: 'subject' } satisfies Record<
+			keyof typeof searchMessageFilters,
+			keyof SearchObject
+		>;
+		const searchKey = search?.filterBy && searchParametersMap[search.filterBy];
+
+		if (searchKey) {
+			searchParameters[searchKey] = search.value;
+		}
+
+		const uids = (await this.client.search(searchParameters, { uid: true })) || [];
 
 		if (uids.length === 0 || offset >= uids.length) {
 			return { data: [], rowCount: 0 } satisfies PaginatedQueryResult<typeof data>;
@@ -88,6 +102,7 @@ export default class Email implements AsyncDisposable {
 			},
 			{ uid: true },
 		);
+		// The messages are returned unsorted despite the UIDs being sorted.
 		const data = messages.sort((a, b) => (sortBy === 'ascending' ? a.uid - b.uid : b.uid - a.uid));
 
 		return { data, rowCount: uids.length } satisfies PaginatedQueryResult<typeof data>;

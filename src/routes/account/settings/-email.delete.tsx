@@ -28,7 +28,7 @@ const Route = getRouteApi('/account/settings/');
 
 const deleteEmailFn = createServerFn({ method: 'POST' })
 	.middleware([sessionMiddleware])
-	.inputValidator(emailAccountSelectSchema.shape.id)
+	.validator(emailAccountSelectSchema.shape.id)
 	.handler(async ({ context, data: id }) => {
 		try {
 			const [email] = await database
@@ -37,7 +37,7 @@ const deleteEmailFn = createServerFn({ method: 'POST' })
 				.returning();
 
 			if (email) {
-				logger.info('Email:%s account deleted by user:%s', email?.id, email?.userId);
+				logger.verbose('Email:%s account deleted by user:%s', email?.id, email?.userId);
 				return formResponse({ message: 'Successfully deleted the email account!', success: true });
 			}
 
@@ -92,7 +92,7 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 				<AlertDialogFooter>
 					<AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
 					<AlertDialogAction variant="destructive" onClick={() => mutate()} disabled={isPending}>
-						{isPending ? <Spinner /> : <Trash />}
+						{isPending ? <Spinner data-icon="inline-start" /> : <Trash data-icon="inline-start" />}
 						Delete
 					</AlertDialogAction>
 				</AlertDialogFooter>

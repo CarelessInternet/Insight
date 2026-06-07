@@ -1,6 +1,7 @@
 import { createRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
 import getQueryClient from '~/lib/query';
+import ErrorComponent from './components/error';
 import { routeTree } from './routeTree.gen';
 
 export function getRouter() {
@@ -12,6 +13,7 @@ export function getRouter() {
 		// Cached data is not shared with all users because getRouter is unique per SSR request.
 		context: { queryClient },
 		scrollRestoration: true,
+		defaultErrorComponent: ErrorComponent,
 		defaultPreload: 'intent',
 		// https://tanstack.com/router/latest/docs/guide/preloading#preloading-with-external-libraries
 		defaultPreloadStaleTime: 0,

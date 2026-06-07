@@ -63,7 +63,7 @@ const serverValidate = createServerValidate({
 
 export const handleForm = createServerFn({ method: 'POST' })
 	.middleware([sessionMiddleware])
-	.inputValidator(z.instanceof(FormData))
+	.validator(z.instanceof(FormData))
 	.handler(async ({ context, data: formData }) => {
 		try {
 			const { label, ...data } = (await serverValidate(formData)) as EmailInsertSchema;
@@ -97,7 +97,7 @@ export const handleForm = createServerFn({ method: 'POST' })
 				userId,
 			});
 
-			logger.info('Email account added by user:%s', userId);
+			logger.verbose('Email account added by user:%s', userId);
 			return formResponse({ message: 'Email account successfully added!', success: true });
 		} catch (err) {
 			if (err instanceof ServerValidateError) {
@@ -119,8 +119,8 @@ export default function AddEmailAccount() {
 	const form = useForm({
 		...accountOptions,
 		validators: {
-			onSubmit: emailInsertSchema,
 			onChange: emailInsertSchema,
+			onSubmit: emailInsertSchema,
 		},
 		listeners,
 		transform: useTransform((baseForm) => mergeForm(baseForm, state), [state]),
@@ -158,21 +158,18 @@ export default function AddEmailAccount() {
 			<DialogTrigger
 				render={
 					<Button>
-						<MailPlus />
+						<MailPlus data-icon="inline-start" />
 						Add Email
 					</Button>
 				}
 			/>
-			<DialogContent
-				// onInteractOutside={handleInteractOutside}
-				className="sm:max-w-lg"
-			>
+			<DialogContent className="sm:max-w-lg">
 				<form
 					ref={ref}
-					onSubmit={(e) => {
-						e.preventDefault();
-						e.stopPropagation();
-						form.handleSubmit();
+					onSubmit={(event) => {
+						event.preventDefault();
+						event.stopPropagation();
+						void form.handleSubmit();
 					}}
 					method="post"
 					encType="multipart/form-data"
@@ -285,19 +282,19 @@ export default function AddEmailAccount() {
 						<DialogClose
 							render={
 								<Button variant="outline">
-									<CircleX />
+									<CircleX data-icon="inline-start" />
 									Cancel
 								</Button>
 							}
 						/>
 						<Button type="reset" variant="destructive" onClick={() => form.reset()}>
-							<Eraser />
+							<Eraser data-icon="inline-start" />
 							Reset
 						</Button>
 						<form.Subscribe selector={(formState) => [formState.canSubmit, formState.isSubmitting]}>
 							{([canSubmit, isSubmitting]) => (
 								<Button type="submit" disabled={!canSubmit}>
-									{isSubmitting ? <Spinner /> : <MailPlus />}
+									{isSubmitting ? <Spinner data-icon="inline-start" /> : <MailPlus data-icon="inline-start" />}
 									Add Account
 								</Button>
 							)}

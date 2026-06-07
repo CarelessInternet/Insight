@@ -53,7 +53,7 @@ const serverValidate = createServerValidate({ onServerValidate: emailSchema });
 
 const handleForm = createServerFn({ method: 'POST' })
 	.middleware([sessionMiddleware])
-	.inputValidator(z.instanceof(FormData))
+	.validator(z.instanceof(FormData))
 	.handler(async ({ context, data: formData }) => {
 		try {
 			const data = (await serverValidate(formData)) as EmailSchema;
@@ -94,7 +94,7 @@ const handleForm = createServerFn({ method: 'POST' })
 				.where(and(eq(emailAccount.userId, userId), eq(emailAccount.id, data.id)))
 				.returning();
 
-			logger.info('Email:%s account updated by user:%s', email?.id, email?.userId);
+			logger.verbose('Email:%s account updated by user:%s', email?.id, email?.userId);
 			return formResponse({ message: 'Email account successfully modified!', success: true });
 		} catch (err) {
 			if (err instanceof ServerValidateError) {
@@ -129,8 +129,8 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 			password: '',
 		} satisfies EmailSchema,
 		validators: {
-			onSubmit: emailSchema,
 			onChange: emailSchema,
+			onSubmit: emailSchema,
 		},
 		listeners,
 		transform: useTransform((baseForm) => mergeForm(baseForm, state), [state]),
@@ -181,10 +181,10 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 			<DialogContent initialFocus={false} className="sm:max-w-lg">
 				<form
 					ref={ref}
-					onSubmit={(e) => {
-						e.preventDefault();
-						e.stopPropagation();
-						form.handleSubmit();
+					onSubmit={(event) => {
+						event.preventDefault();
+						event.stopPropagation();
+						void form.handleSubmit();
 					}}
 					method="post"
 					encType="multipart/form-data"
@@ -296,18 +296,18 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 					<DialogFooter>
 						<DialogClose>
 							<Button variant="outline">
-								<CircleX />
+								<CircleX data-icon="inline-start" />
 								Cancel
 							</Button>
 						</DialogClose>
 						<Button type="reset" variant="destructive" onClick={() => form.reset()}>
-							<Eraser />
+							<Eraser data-icon="inline-start" />
 							Reset
 						</Button>
 						<form.Subscribe selector={(formState) => [formState.canSubmit, formState.isSubmitting]}>
 							{([canSubmit, isSubmitting]) => (
 								<Button type="submit" disabled={!canSubmit}>
-									{isSubmitting ? <Spinner /> : <PencilLine />}
+									{isSubmitting ? <Spinner data-icon="inline-start" /> : <PencilLine data-icon="inline-start" />}
 									Edit Account
 								</Button>
 							)}

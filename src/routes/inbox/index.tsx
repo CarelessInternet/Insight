@@ -78,7 +78,7 @@ function RouteComponent() {
 						defaultOpen
 					>
 						<ComboboxInput type="text" placeholder="Choose an email account...">
-							<InputGroupAddon>
+							<InputGroupAddon align="inline-start">
 								<Inbox />
 							</InputGroupAddon>
 						</ComboboxInput>

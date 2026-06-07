@@ -33,7 +33,7 @@ const signUpClientSchema = signUpServerSchema.extend({
 });
 
 const passkeyServerSignUp = createServerFn({ method: 'POST' })
-	.inputValidator(signUpServerSchema)
+	.validator(signUpServerSchema)
 	.handler(async ({ data }) => {
 		const { payload, token } = await createPasskeyContext(data);
 		await auth.options.secondaryStorage.set(toContext(payload.nonce), '1', passkeyContextPayloadTTL);
@@ -55,8 +55,8 @@ function RouteComponent() {
 			passkeyName: 'Insight Passkey',
 		} satisfies z.infer<typeof signUpClientSchema>,
 		validators: {
-			onSubmit: signUpClientSchema,
 			onChange: signUpClientSchema,
+			onSubmit: signUpClientSchema,
 		},
 		listeners,
 		transform: useTransform((baseForm) => mergeForm(baseForm, state), [state]),
@@ -98,10 +98,10 @@ function RouteComponent() {
 						</CardHeader>
 						<CardContent>
 							<form
-								onSubmit={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									form.handleSubmit();
+								onSubmit={(event) => {
+									event.preventDefault();
+									event.stopPropagation();
+									void form.handleSubmit();
 								}}
 								method="post"
 								encType="multipart/form-data"
@@ -187,7 +187,7 @@ function RouteComponent() {
 										<form.Subscribe selector={(formState) => [formState.canSubmit, formState.isSubmitting]}>
 											{([canSubmit, isSubmitting]) => (
 												<Button type="submit" disabled={!canSubmit}>
-													{isSubmitting ? <Spinner /> : <UserPlus />}
+													{isSubmitting ? <Spinner data-icon="inline-start" /> : <UserPlus data-icon="inline-start" />}
 													Create Account
 												</Button>
 											)}

@@ -19,7 +19,7 @@ const Route = getRouteApi('/account/settings/');
 
 const revalidateEmailsFn = createServerFn({ method: 'POST' })
 	.middleware([sessionMiddleware])
-	.inputValidator(z.array(emailAccountSelectSchema.shape.id))
+	.validator(z.array(emailAccountSelectSchema.shape.id))
 	.handler(async ({ context, data: ids }) => {
 		try {
 			const emails = await database.query.emailAccount.findMany({
@@ -98,7 +98,7 @@ export default function RevalidateEmails({ onRevalidated, rows }: { onRevalidate
 
 	return (
 		<Button variant="secondary" onClick={() => mutate()} disabled={isPending}>
-			{isPending ? <Spinner /> : <Wrench />}
+			{isPending ? <Spinner data-icon="inline-start" /> : <Wrench data-icon="inline-start" />}
 			Revalidate Selected Emails
 		</Button>
 	);

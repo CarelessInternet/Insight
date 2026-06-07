@@ -35,7 +35,7 @@ export type EmailMiddlewareSchema = z.infer<typeof emailMiddlewareSchema>;
 export function emailMiddleware({ decrypt }: { decrypt: boolean }) {
 	return createMiddleware({ type: 'function' })
 		.middleware([sessionMiddleware])
-		.inputValidator(emailMiddlewareSchema.loose())
+		.validator(emailMiddlewareSchema.loose())
 		.server(async ({ context, data, next, serverFnMeta: { name } }) => {
 			let email = await database.query.emailAccount.findFirst({
 				where: (field, { and, eq }) =>

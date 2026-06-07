@@ -9,11 +9,15 @@ import { Separator } from '~/components/ui/separator';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '~/components/ui/sheet';
 import { Skeleton } from '~/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
+import { getIsomorphicCookie, setIsomorphicCookie } from '~/lib/cookie';
 import { useIsMobile } from '~/lib/hooks/use-mobile';
 import { cn } from '~/lib/utils';
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+/**
+ * The max age is in milliseconds.
+ */
+const SIDEBAR_COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 7 * 52;
 const SIDEBAR_WIDTH = '16rem';
 const SIDEBAR_WIDTH_MOBILE = '18rem';
 const SIDEBAR_WIDTH_ICON = '3rem';
@@ -58,7 +62,11 @@ function SidebarProvider({
 
 	// This is the internal state of the sidebar.
 	// We use openProp and setOpenProp for control from outside the component.
-	const [_open, _setOpen] = React.useState(defaultOpen);
+	const [_open, _setOpen] = React.useState(() => {
+		// https://github.com/shadcn-ui/ui/pull/9089
+		const cookieState = getIsomorphicCookie(SIDEBAR_COOKIE_NAME);
+		return cookieState !== null ? (JSON.parse(cookieState) as boolean) : defaultOpen;
+	});
 	const open = openProp ?? _open;
 	const setOpen = React.useCallback(
 		(value: boolean | ((value: boolean) => boolean)) => {
@@ -70,8 +78,7 @@ function SidebarProvider({
 			}
 
 			// This sets the cookie to keep the sidebar state.
-			// biome-ignore lint/suspicious/noDocumentCookie: shadcn/ui code.
-			document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+			setIsomorphicCookie({ name: SIDEBAR_COOKIE_NAME, value: String(openState), expires: SIDEBAR_COOKIE_MAX_AGE });
 		},
 		[setOpenProp, open],
 	);

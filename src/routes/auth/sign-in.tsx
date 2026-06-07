@@ -55,10 +55,10 @@ function RouteComponent() {
 						</CardHeader>
 						<CardContent className="flex flex-1 items-center">
 							<form
-								onSubmit={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									form.handleSubmit();
+								onSubmit={(event) => {
+									event.preventDefault();
+									event.stopPropagation();
+									void form.handleSubmit();
 								}}
 								className="contents"
 							>
@@ -68,7 +68,7 @@ function RouteComponent() {
 										<form.Subscribe selector={(formState) => [formState.canSubmit, formState.isSubmitting]}>
 											{([canSubmit, isSubmitting]) => (
 												<Button type="submit" disabled={!canSubmit}>
-													{isSubmitting ? <Spinner /> : <UserKey />}
+													{isSubmitting ? <Spinner data-icon="inline-start" /> : <UserKey data-icon="inline-start" />}
 													Sign In with Passkey
 												</Button>
 											)}

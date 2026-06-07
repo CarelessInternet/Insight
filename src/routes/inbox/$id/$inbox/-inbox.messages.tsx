@@ -20,7 +20,7 @@ import { type RouteSearchSchema, routeSearchSchema } from './-route.schema';
 const Route = getRouteApi('/inbox/$id/$inbox/');
 
 const fetchInbox = createServerFn({ method: 'GET' })
-	.inputValidator(routeSearchSchema)
+	.validator(routeSearchSchema)
 	.middleware([emailMiddleware({ decrypt: true })])
 	.handler(async ({ context: { email, user }, data }) => {
 		await using imapEmail = new Email({
@@ -40,7 +40,7 @@ const fetchInbox = createServerFn({ method: 'GET' })
 
 		try {
 			const messages = await imapEmail.getPaginatedMailboxMessages(data);
-			logger.info('Fetched inbox emails for inbox:%s by user:%s', email.id, user.id);
+			logger.verbose('Fetched inbox emails for inbox:%s by user:%s', email.id, user.id);
 
 			return messages;
 		} catch (err) {
@@ -48,9 +48,8 @@ const fetchInbox = createServerFn({ method: 'GET' })
 				throw Route.redirect({ to: '/inbox/$id/$inbox', params: { id: email.id, inbox: 'INBOX' } });
 			}
 
-			// TODO: display a proper failed state in the UI.
 			logger.warn('Fetching inbox emails failed: %s', err);
-			return { data: [], rowCount: 0 } satisfies Awaited<ReturnType<typeof imapEmail.getPaginatedMailboxMessages>>;
+			throw err;
 		}
 	});
 
