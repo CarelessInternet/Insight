@@ -9,7 +9,7 @@ export function getRouter() {
 	const router = createRouter({
 		routeTree,
 		// Passing down the QueryClient is extremely important for persisting cached data!
-		// It is not optional despite what is said here: https://tanstack.com/router/latest/docs/integrations/query#setup
+		// It is in practice not optional despite what is said here: https://tanstack.com/router/latest/docs/integrations/query#setup
 		// Cached data is not shared with all users because getRouter is unique per SSR request.
 		context: { queryClient },
 		scrollRestoration: true,

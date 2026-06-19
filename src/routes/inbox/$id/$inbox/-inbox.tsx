@@ -1,6 +1,6 @@
 import { useForm } from '@tanstack/react-form';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ClientOnly, getRouteApi, useHydrated } from '@tanstack/react-router';
+import { getRouteApi, useHydrated } from '@tanstack/react-router';
 import {
 	ArrowUpDown,
 	BellRing,
@@ -24,7 +24,6 @@ import {
 	View,
 } from 'lucide-react';
 import { type ReactNode, Suspense, useEffect, useState } from 'react';
-import type z from 'zod';
 import { Button } from '~/components/ui/button';
 import { Field, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
@@ -36,7 +35,7 @@ import { useSidebar } from '~/components/ui/sidebar';
 import { Skeleton } from '~/components/ui/skeleton';
 import { Spinner } from '~/components/ui/spinner';
 import { Switch } from '~/components/ui/switch';
-import { searchMessageFilters, searchMessageSchema } from '~/lib/email';
+import { type SearchMessageSchema, searchMessageFilters, searchMessageSchema } from '~/lib/email';
 import { isInvalidField } from '~/lib/forms';
 import { useDebouncedSyncedState } from '~/lib/hooks/use-debounced';
 import InboxMessages, { inboxOptions } from './-inbox.messages';
@@ -47,14 +46,12 @@ const Route = getRouteApi('/inbox/$id/$inbox/');
 const sortByItems = {
 	descending: (
 		<>
-			<CalendarArrowDown />
-			Descending
+			<CalendarArrowDown /> Descending
 		</>
 	),
 	ascending: (
 		<>
-			<CalendarArrowUp />
-			Ascending
+			<CalendarArrowUp /> Ascending
 		</>
 	),
 } as const satisfies Record<RouteSearchSchema['sortBy'], ReactNode>;
@@ -62,14 +59,12 @@ const sortByItems = {
 const searchByItems = {
 	from: (
 		<>
-			<Contact />
-			From
+			<Contact /> From
 		</>
 	),
 	subject: (
 		<>
-			<BookText />
-			Subject
+			<BookText /> Subject
 		</>
 	),
 	content: (
@@ -78,11 +73,6 @@ const searchByItems = {
 		</>
 	),
 } as const satisfies Record<keyof typeof searchMessageFilters, ReactNode>;
-
-const defaultSearchValues = {
-	filterBy: searchMessageFilters.from,
-	value: '',
-} as z.infer<typeof searchMessageSchema>;
 
 export default function Inbox() {
 	const parameters = Route.useParams();
@@ -103,15 +93,20 @@ export default function Inbox() {
 		placeholderData: keepPreviousData,
 		select: ({ rowCount }) => rowCount,
 	});
-	const pageCount = rowCount !== undefined ? Math.ceil(rowCount / search.rowsPerPage) : null;
+	const pageCount = rowCount !== undefined ? Math.ceil((rowCount !== 0 ? rowCount : 1) / search.rowsPerPage) : null;
 
 	const [pageInput, setPageInput] = useDebouncedSyncedState(search.page, (page) =>
 		navigate({ replace: true, search: { page } }),
 	);
 	const [persistMessageView, setPersistMessageView] = useState(false);
 
+	const initialSearchValues: SearchMessageSchema = {
+		filterBy: searchMessageFilters.from,
+		value: search.search?.value ?? '',
+	} satisfies SearchMessageSchema;
+
 	const form = useForm({
-		defaultValues: defaultSearchValues,
+		defaultValues: initialSearchValues,
 		validators: {
 			// onChange: searchMessageSchema,
 			// onSubmit: searchMessageSchema,
@@ -124,20 +119,20 @@ export default function Inbox() {
 				replace: true,
 				search: (previous) => ({
 					messageId: persistMessageView ? previous.messageId : undefined,
+					page: undefined,
 					search: options.value ? options : undefined,
 				}),
 			});
 		},
 	});
 
-	// Reset the search on navigation to a new inbox.
+	// Reset the search value on navigation to a new inbox.
 	useEffect(() => {
 		if (!search.search) {
-			form.reset();
+			form.resetField('value');
 		}
-	}, [search.search, form.reset]);
+	}, [search.search, form.resetField]);
 
-	// TODO: fix focus-visible not revealing all of the box shadow.
 	return (
 		<div className="@container flex h-full max-h-[calc(100dvh-var(--header-height))] flex-col overflow-hidden">
 			<div className="flex-none">
@@ -145,7 +140,7 @@ export default function Inbox() {
 					<div className="flex flex-row">
 						{isMobile && (
 							<Button variant="secondary" className="grow rounded-none border-none" onClick={toggleSidebar}>
-								{openMobile ? <PanelLeftOpen data-icon="inline-start" /> : <PanelLeftClose data-icon="inline-start" />}{' '}
+								{openMobile ? <PanelLeftOpen data-icon="inline-start" /> : <PanelLeftClose data-icon="inline-start" />}
 								Sidebar
 							</Button>
 						)}
@@ -158,14 +153,13 @@ export default function Inbox() {
 							<PopoverTrigger
 								render={
 									<Button variant="ghost" className="grow rounded-none border-none">
-										<Filter data-icon="inline-start" />
-										Filters
+										<Filter data-icon="inline-start" /> Filters
 									</Button>
 								}
 							/>
 							<PopoverContent>
 								<PopoverHeader>
-									<PopoverTitle>Configure Filters</PopoverTitle>
+									<PopoverTitle>Configure Inbox Filters</PopoverTitle>
 								</PopoverHeader>
 								<Field orientation="horizontal">
 									<FieldLabel htmlFor="sort-by">
@@ -310,7 +304,7 @@ export default function Inbox() {
 													<Select
 														items={searchByItems}
 														value={field.state.value}
-														onValueChange={(value) => field.handleChange(value ?? defaultSearchValues.filterBy)}
+														onValueChange={(value) => field.handleChange(value ?? initialSearchValues.filterBy)}
 													>
 														<SelectTrigger id={field.name} size="sm">
 															<SelectValue className="gap-2!" />
@@ -343,94 +337,11 @@ export default function Inbox() {
 												</Button>
 											</PopoverContent>
 										</Popover>
-										{/* <DropdownMenu>
-											<DropdownMenuTrigger
-												render={
-													<InputGroupButton variant="secondary">
-														<ListFilter data-icon="inline-start" />
-														Options
-														<ChevronDown data-icon="inline-end" />
-													</InputGroupButton>
-												}
-											/>
-											<DropdownMenuContent>
-												<DropdownMenuGroup>
-													<DropdownMenuLabel>Search by...</DropdownMenuLabel>
-													<DropdownMenuRadioGroup
-														id={field.name}
-														value={field.state.value}
-														onValueChange={field.handleChange}
-													>
-														<DropdownMenuRadioItem value={searchMessageFilters.from}>
-															<Contact />
-															From
-														</DropdownMenuRadioItem>
-														<DropdownMenuRadioItem value={searchMessageFilters.subject}>
-															<BookText />
-															Subject
-														</DropdownMenuRadioItem>
-														<DropdownMenuRadioItem value={searchMessageFilters.content}>
-															<Captions /> Content
-														</DropdownMenuRadioItem>
-													</DropdownMenuRadioGroup>
-												</DropdownMenuGroup>
-											</DropdownMenuContent>
-										</DropdownMenu> */}
 									</InputGroupAddon>
 								)}
 							</form.Field>
 						</InputGroup>
 					</form>
-					{/* <form
-						onSubmit={(event) => {
-							event.preventDefault();
-							event.stopPropagation();
-
-							const formData = new FormData(event.currentTarget);
-							const value = formData.get('search');
-
-							if (value) {
-								navigate({ replace: true, search: { search: { ...search.search, value: value as string } } });
-							}
-						}}
-						className="contents"
-					>
-						<InputGroup className="max-w-full rounded-none border-none">
-							<InputGroupAddon align="inline-start">
-								<MailSearch />
-							</InputGroupAddon>
-							<InputGroupInput
-								type="text"
-								inputMode="search"
-								name="search"
-								placeholder="Search..."
-								disabled={isRefetching}
-							/>
-							<InputGroupAddon align="inline-end">
-								<DropdownMenu>
-									<DropdownMenuTrigger
-										render={
-											<InputGroupButton variant="secondary">
-												<ListFilter data-icon="inline-start" />
-												Options
-												<ChevronDown data-icon="inline-end" />
-											</InputGroupButton>
-										}
-									/>
-									<DropdownMenuContent>
-										<DropdownMenuGroup>
-											<DropdownMenuLabel>Search by...</DropdownMenuLabel>
-											<DropdownMenuRadioGroup defaultValue="subject">
-												<DropdownMenuRadioItem value="from">From</DropdownMenuRadioItem>
-												<DropdownMenuRadioItem value="subject">Subject</DropdownMenuRadioItem>
-												<DropdownMenuRadioItem value="content">Content</DropdownMenuRadioItem>
-											</DropdownMenuRadioGroup>
-										</DropdownMenuGroup>
-									</DropdownMenuContent>
-								</DropdownMenu>
-							</InputGroupAddon>
-						</InputGroup>
-					</form> */}
 				</div>
 				<Separator />
 			</div>
@@ -454,7 +365,7 @@ export default function Inbox() {
 					<Button
 						variant="ghost"
 						className="grow rounded-none border-none"
-						disabled={isRefetching || search.page === 1}
+						disabled={isRefetching || search.page <= 1}
 						onClick={() =>
 							navigate({
 								replace: true,
@@ -472,7 +383,7 @@ export default function Inbox() {
 							type="text"
 							inputMode="numeric"
 							className="h-5 w-10 px-2 text-sm"
-							disabled={isRefetching || rowCount === 0}
+							disabled={hydrated && (isRefetching || rowCount === 0)}
 							value={pageInput}
 							onValueChange={(rawPage, event) => {
 								const page = Number(rawPage);
@@ -488,13 +399,13 @@ export default function Inbox() {
 								setPageInput(page);
 							}}
 						/>
-						of <ClientOnly fallback="...">{pageCount}</ClientOnly>
+						of {hydrated ? pageCount : '...'}
 					</span>
 					<Separator orientation="vertical" />
 					<Button
 						variant="ghost"
 						className="grow rounded-none border-none"
-						disabled={hydrated ? isRefetching || search.page === pageCount : false}
+						disabled={hydrated && (isRefetching || search.page === pageCount)}
 						onClick={() =>
 							navigate({
 								replace: true,

@@ -12,5 +12,5 @@ export function resolveContext(context: string) {
 }
 
 export function toContext(nonce: PasskeyContextPayload['nonce']) {
-	return contextSchema.parse(`passkey-context:${nonce}`);
+	return contextSchema.parse(`${contextPrefix}:${nonce}`);
 }

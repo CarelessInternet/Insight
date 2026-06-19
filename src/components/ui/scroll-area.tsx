@@ -33,4 +33,10 @@ function ScrollBar({ className, orientation = 'vertical', ...props }: ScrollArea
 	);
 }
 
-export { ScrollArea, ScrollBar };
+function ScrollAreaContent({ className, ...props }: ScrollAreaPrimitive.Content.Props) {
+	return (
+		<ScrollAreaPrimitive.Content data-slot="scroll-area-content" className={cn('size-full', className)} {...props} />
+	);
+}
+
+export { ScrollArea, ScrollAreaContent, ScrollBar };

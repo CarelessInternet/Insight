@@ -1,10 +1,22 @@
 import { relations, sql } from 'drizzle-orm';
-import { boolean, index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+	boolean,
+	index,
+	integer,
+	pgEnum,
+	pgTable,
+	uuid as pgUuid,
+	text,
+	timestamp,
+	uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import z from 'zod';
 
+const uuid = (name: string) => pgUuid(name).default(sql`uuidv7()`);
+
 export const user = pgTable('user', {
-	id: uuid('id').default(sql`uuidv7()`).primaryKey(),
+	id: uuid('id').primaryKey(),
 	name: text('name').notNull(),
 	email: text('email').notNull().unique(),
 	emailVerified: boolean('email_verified').default(false).notNull(),
@@ -18,7 +30,7 @@ export const user = pgTable('user', {
 export const session = pgTable(
 	'session',
 	{
-		id: uuid('id').default(sql`uuidv7()`).primaryKey(),
+		id: uuid('id').primaryKey(),
 		expiresAt: timestamp('expires_at').notNull(),
 		token: text('token').notNull().unique(),
 		createdAt: timestamp('created_at').notNull(),
@@ -28,7 +40,6 @@ export const session = pgTable(
 		ipAddress: text('ip_address'),
 		userAgent: text('user_agent'),
 		userId: uuid('user_id')
-			.default(sql`uuidv7()`)
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 	},
@@ -38,11 +49,10 @@ export const session = pgTable(
 export const account = pgTable(
 	'account',
 	{
-		id: uuid('id').default(sql`uuidv7()`).primaryKey(),
+		id: uuid('id').primaryKey(),
 		accountId: text('account_id').notNull(),
 		providerId: text('provider_id').notNull(),
 		userId: uuid('user_id')
-			.default(sql`uuidv7()`)
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		accessToken: text('access_token'),
@@ -63,7 +73,7 @@ export const account = pgTable(
 export const verification = pgTable(
 	'verification',
 	{
-		id: uuid('id').default(sql`uuidv7()`).primaryKey(),
+		id: uuid('id').primaryKey(),
 		identifier: text('identifier').notNull(),
 		value: text('value').notNull(),
 		expiresAt: timestamp('expires_at').notNull(),
@@ -78,11 +88,10 @@ export const verification = pgTable(
 export const passkey = pgTable(
 	'passkey',
 	{
-		id: uuid('id').default(sql`uuidv7()`).primaryKey(),
+		id: uuid('id').primaryKey(),
 		name: text('name'),
 		publicKey: text('public_key').notNull(),
 		userId: uuid('user_id')
-			.default(sql`uuidv7()`)
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		credentialID: text('credential_id').notNull(),

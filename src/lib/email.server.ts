@@ -1,10 +1,12 @@
 import { ImapFlow, type SearchObject } from 'imapflow';
+import PostalMime from 'postal-mime';
 import type z from 'zod';
 import { decrypt } from './crypto.server';
 import {
 	type EmailCredentialsSchema,
 	inbox as emailInbox,
 	getMessageSchema,
+	getSubject,
 	paginatedEmailMessagesSchema,
 	type searchMessageFilters,
 	setMessageFlagsSchema,
@@ -112,12 +114,29 @@ export default class Email implements AsyncDisposable {
 		const { inbox, messageId } = getMessageSchema.parse(parameters);
 		using _ = await this.getMailbox(inbox);
 
-		const message = await this.client.fetchOne(
-			messageId,
-			{ bodyStructure: true, envelope: true, flags: true, internalDate: true, size: true },
-			{ uid: true },
-		);
-		return message || null;
+		const message = await this.client.fetchOne(messageId, { flags: true, source: true }, { uid: true });
+
+		// biome-ignore lint/complexity/useOptionalChain: Optional chaining does not work on type false.
+		if (!message || !message.source) {
+			return null;
+		}
+
+		const email = await PostalMime.parse(message.source, {
+			// https://postal-mime.postalsys.com/docs/getting-started/configuration#security-recommendations
+			forceRfc822Attachments: true,
+			maxHeadersSize: 524288,
+			maxNestingDepth: 50,
+		});
+
+		return {
+			imap: { ...message },
+			// https://postal-mime.postalsys.com/docs/examples/basic-parsing#complete-email-parser-function
+			source: {
+				...email,
+				subject: getSubject(email.subject),
+				date: email.date ? new Date(email.date) : null,
+			},
+		};
 	}
 
 	public async addMessageFlags(parameters: z.infer<typeof setMessageFlagsSchema>) {

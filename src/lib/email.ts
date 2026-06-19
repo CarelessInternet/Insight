@@ -1,3 +1,6 @@
+import type { MessageEnvelopeObject } from 'imapflow';
+import { addHook, type ElementHook, removeHook, sanitize, type UponSanitizeAttributeHook } from 'isomorphic-dompurify';
+import type { Address, Attachment } from 'postal-mime';
 import z from 'zod';
 import { emailAccountInsertSchema, type emailAccountSelectSchema } from './database/schema';
 
@@ -24,6 +27,7 @@ export const searchMessageSchema = z.object({
 	value: z.string(),
 	filterBy: z.enum(['from', 'subject', 'content']).default('subject'),
 });
+export type SearchMessageSchema = z.infer<typeof searchMessageSchema>;
 export const searchMessageFilters = searchMessageSchema.shape.filterBy.unwrap().enum;
 
 export const paginatedEmailMessagesSchema = z.object({
@@ -44,3 +48,79 @@ export type MessageFlagsSet = z.infer<typeof messageFlagsSet>;
 export const setMessageFlagsSchema = getMessageSchema.safeExtend({
 	flags: messageFlagsSet,
 });
+
+export function getSubject(subject: string | undefined) {
+	return subject || '(no subject)';
+}
+
+export function getSenderInfo(address: MessageEnvelopeObject['from'] | Address) {
+	const from = Array.isArray(address) ? address : [address];
+
+	const rawInitials =
+		from
+			?.at(0)
+			?.name?.split(' ')
+			.map((name) => name.at(0))
+			.join('') || from?.at(0)?.address?.at(0);
+
+	return {
+		initials: rawInitials?.toWellFormed().slice(0, 2),
+		from: from?.map((sender) => sender?.name || sender?.address).join(', '),
+	};
+}
+
+// https://postal-mime.postalsys.com/docs/examples/email-viewer#react-email-viewer-component
+export function replaceInlineImages(html: string, attachments: Attachment[]) {
+	let result = html;
+
+	attachments
+		.filter((a) => a.related && a.contentId)
+		.forEach((att) => {
+			const cid = att.contentId?.replace(/^<|>$/g, '');
+			const dataUrl = `data:${att.mimeType};base64,${att.content}`;
+
+			result = result.replace(new RegExp(`cid:${cid}`, 'gi'), dataUrl);
+		});
+
+	return result;
+}
+
+export function sanitizeMessageHtml(html: string | undefined, allowRemoteSrc: boolean) {
+	if (!html) {
+		return { messageHtml: '', sawRemoteSrc: false };
+	}
+
+	let sawRemoteSrc = false;
+
+	// https://github.com/cure53/DOMPurify/tree/main/demos#hook-to-open-all-links-in-a-new-window-link
+	// Add a hook to make all links open a new window.
+	const afterSanitizeAttributes: ElementHook = (node) => {
+		if ('target' in node) {
+			node.setAttribute('target', '_blank');
+		}
+
+		if (!node.hasAttribute('target') && (node.hasAttribute('xlink:href') || node.hasAttribute('href'))) {
+			node.setAttribute('xlink:show', 'new');
+		}
+	};
+
+	const uponSanitizeAttribute: UponSanitizeAttributeHook = (_, { attrName }) => {
+		if (attrName === 'src') {
+			sawRemoteSrc = true;
+		}
+	};
+
+	addHook('afterSanitizeAttributes', afterSanitizeAttributes);
+	addHook('uponSanitizeAttribute', uponSanitizeAttribute);
+
+	// https://postal-mime.postalsys.com/docs/guides/security#5-sanitize-html-content
+	const sanitized = sanitize(html, {
+		WHOLE_DOCUMENT: true,
+		FORBID_ATTR: allowRemoteSrc ? [] : ['src'],
+	});
+
+	removeHook('afterSanitizeAttributes', afterSanitizeAttributes);
+	removeHook('uponSanitizeAttribute', uponSanitizeAttribute);
+
+	return { messageHtml: sanitized, sawRemoteSrc };
+}

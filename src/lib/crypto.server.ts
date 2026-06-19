@@ -19,15 +19,32 @@ const bytesToUtf8 = z.codec(z.instanceof(Uint8Array), z.string(), {
 	encode: (str) => new TextEncoder().encode(str),
 });
 
-const aesName = 'AES-GCM' as const;
-const aesKey = await crypto.subtle.importKey(
+const rootKey = await crypto.subtle.importKey(
 	'raw',
-	base64ToBytes.decode(environment.ENCRYPTION_SECRET),
-	{ name: aesName },
+	bytesToUtf8.encode(environment.APPLICATION_SECRET),
+	'HKDF',
 	false,
-	['encrypt', 'decrypt'],
+	['deriveKey'],
 );
 
+const hmacName = 'HMAC' as const;
+const aesName = 'AES-GCM' as const;
+const createDerivedKey = async (context: string, usage: 'encryption' | 'hash' | 'verification') =>
+	await crypto.subtle.deriveKey(
+		{
+			name: 'HKDF',
+			hash: 'SHA-256',
+			salt: bytesToUtf8.encode('insight-v1'),
+			// Info is required but may be empty: https://developer.mozilla.org/en-US/docs/Web/API/HkdfParams#info
+			info: bytesToUtf8.encode(context),
+		},
+		rootKey,
+		usage === 'encryption' ? { name: aesName, length: 256 } : { name: hmacName, hash: 'SHA-256' },
+		false,
+		usage === 'encryption' ? ['decrypt', 'encrypt'] : usage === 'hash' ? ['sign'] : ['sign', 'verify'],
+	);
+
+const aesKey = await createDerivedKey('database', 'encryption');
 const aesEncryptedSchema = z.stringFormat('encrypted-data', new RegExp(`^${aesPrefix}:(.+):(.+)$`));
 
 export const encrypt = createServerOnlyFn(async (text: string) => {
@@ -59,18 +76,7 @@ export const decrypt = createServerOnlyFn(async (encrypted: string) => {
 	return decrypted;
 });
 
-const hmacName = 'HMAC' as const;
-const hmacKey = await crypto.subtle.importKey(
-	'raw',
-	base64ToBytes.decode(environment.LOOKUP_SECRET),
-	{
-		hash: 'SHA-256',
-		name: hmacName,
-	} satisfies HmacImportParams,
-	false,
-	['sign'],
-);
-
+const hmacKey = await createDerivedKey('lookup', 'hash');
 const hmacEncryptedSchema = z.stringFormat('encrypted-data', new RegExp(`^${hmacPrefix}:(.+)$`));
 
 export const hash = createServerOnlyFn(async (text: string) => {
@@ -98,26 +104,7 @@ interface PasskeyContext {
 	token: string;
 }
 
-const passkeyContextRootKey = await crypto.subtle.importKey(
-	'raw',
-	bytesToUtf8.encode(environment.BETTER_AUTH_SECRET),
-	'HKDF',
-	false,
-	['deriveKey'],
-);
-const derivedPasskeyContextKey = await crypto.subtle.deriveKey(
-	{
-		name: 'HKDF',
-		hash: 'SHA-256',
-		salt: bytesToUtf8.encode('insight-passkey-context-salt'),
-		info: bytesToUtf8.encode('passkey-context'),
-	},
-	passkeyContextRootKey,
-	{ name: hmacName, hash: 'SHA-256' },
-	false,
-	['sign', 'verify'],
-);
-
+const passkeyContextKey = await createDerivedKey('passkey-context', 'verification');
 const passkeyContextSchema = z.stringFormat('passkey-context-data', (value) => {
 	const [body, signature] = value.split('.');
 
@@ -138,7 +125,7 @@ export const createPasskeyContext = createServerOnlyFn(
 		} satisfies PasskeyContextPayload;
 
 		const body = base64ToBytes.encode(bytesToUtf8.encode(JSON.stringify(payload)));
-		const signature = await crypto.subtle.sign(hmacName, derivedPasskeyContextKey, bytesToUtf8.encode(body));
+		const signature = await crypto.subtle.sign(hmacName, passkeyContextKey, bytesToUtf8.encode(body));
 
 		return {
 			payload,
@@ -153,7 +140,7 @@ export const verifyPasskeyContext = createServerOnlyFn(async (token: PasskeyCont
 
 	const ok = await crypto.subtle.verify(
 		hmacName,
-		derivedPasskeyContextKey,
+		passkeyContextKey,
 		base64ToBytes.decode(signature as string),
 		bytesToUtf8.encode(body as string),
 	);

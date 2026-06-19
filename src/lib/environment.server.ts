@@ -3,9 +3,7 @@ import z from 'zod';
 
 export const environment = createEnv({
 	server: {
-		ENCRYPTION_SECRET: z.base64().min(32),
-		LOOKUP_SECRET: z.string().min(32),
-		BETTER_AUTH_SECRET: z.string().min(32),
+		APPLICATION_SECRET: z.base64().min(32),
 		BETTER_AUTH_URL: z.url(),
 		DATABASE_URL: z.url(),
 		REDIS_URL: z.url().optional(),

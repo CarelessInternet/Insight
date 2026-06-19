@@ -29,7 +29,7 @@ const signUpServerSchema = z.object({
 });
 
 const signUpClientSchema = signUpServerSchema.extend({
-	passkeyName: z.string().nonempty(),
+	passkeyName: z.string(),
 });
 
 const passkeyServerSignUp = createServerFn({ method: 'POST' })
@@ -52,7 +52,7 @@ function RouteComponent() {
 		defaultValues: {
 			username: '',
 			email: '',
-			passkeyName: 'Insight Passkey',
+			passkeyName: '',
 		} satisfies z.infer<typeof signUpClientSchema>,
 		validators: {
 			onChange: signUpClientSchema,
@@ -66,8 +66,8 @@ function RouteComponent() {
 
 				const context = await passkeySignUp({ data: { email, username } });
 				const { error } = await authClient.passkey.addPasskey({
-					name: passkeyName,
 					context,
+					name: passkeyName,
 				});
 
 				if (error) {
@@ -76,7 +76,7 @@ function RouteComponent() {
 					navigate({ to: '/auth/sign-in' });
 				}
 			} catch (err) {
-				setError(err instanceof Error ? err.message : 'An error occurred while creating the account/passkey.');
+				setError(Error.isError(err) ? err.message : 'An error occurred while creating the account/passkey.');
 			}
 		},
 	});
@@ -164,9 +164,10 @@ function RouteComponent() {
 
 											return (
 												<Field data-invalid={isInvalid}>
-													<FieldLabel htmlFor={field.name}>
-														Passkey Name <span className="text-destructive">*</span>
-													</FieldLabel>
+													<FieldLabel htmlFor={field.name}>Passkey Name</FieldLabel>
+													<FieldDescription>
+														Leave the passkey name empty to use the default name by your authenticator of choice.
+													</FieldDescription>
 													<Input
 														id={field.name}
 														type="text"
@@ -176,7 +177,6 @@ function RouteComponent() {
 														onChange={(e) => field.handleChange(e.target.value)}
 														aria-invalid={isInvalid}
 														placeholder="Insight Passkey"
-														required
 													/>
 													{isInvalid && <FieldError errors={field.state.meta.errors} />}
 												</Field>

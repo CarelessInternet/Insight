@@ -78,7 +78,11 @@ export default function SidebarEmailAccounts() {
 								<DropdownMenuItem
 									key={email.id}
 									render={
-										<Route.Link to="/inbox/$id/$inbox" params={{ id: email.id, inbox: 'INBOX' }}>
+										<Route.Link
+											to="/inbox/$id/$inbox"
+											params={{ id: email.id, inbox: 'INBOX' }}
+											search={{ messageId: undefined, page: undefined, search: undefined }}
+										>
 											{email.status === 'valid' ? (
 												<MailCheck className="text-primary" />
 											) : (

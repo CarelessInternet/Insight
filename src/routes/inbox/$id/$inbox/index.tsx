@@ -35,11 +35,7 @@ export const Route = createFileRoute('/inbox/$id/$inbox/')({
 	},
 	validateSearch: searchSchema,
 	search: {
-		middlewares: [
-			retainSearchParams(
-				searchSchema.pick({ rowsPerPage: true, search: true, seen: true, sortBy: true }).keyof().options,
-			),
-		],
+		middlewares: [retainSearchParams(searchSchema.keyof().options)],
 	},
 });
 
@@ -49,6 +45,7 @@ function RouteComponent() {
 
 	const isRenderedMobile = useIsMobile();
 	const isIsomorphicMobile = Route.useLoaderData();
+	// TODO: changing from toggled mobile view to desktop renders mobile view.
 	const isMobile = isIsomorphicMobile || isRenderedMobile;
 
 	const inboxPanelId = 'inbox';

@@ -91,7 +91,7 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 								<Route.Link
 									to="/inbox/$id/$inbox"
 									params={{ id, inbox: folder.path }}
-									search={{ search: undefined }}
+									search={{ messageId: undefined, page: undefined, search: undefined }}
 									className="contents"
 								>
 									{folder.specialUse === '\\Inbox' ? FolderIcon({ specialUse: folder.specialUse }) : <Folder />}
@@ -123,7 +123,11 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 				className="py-4.5"
 				isActive={isActive}
 				render={
-					<Route.Link to="/inbox/$id/$inbox" params={{ id, inbox: folder.path }} search={{ search: undefined }}>
+					<Route.Link
+						to="/inbox/$id/$inbox"
+						params={{ id, inbox: folder.path }}
+						search={{ messageId: undefined, page: undefined, search: undefined }}
+					>
 						<FolderIcon specialUse={folder.specialUse} />
 						{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
 					</Route.Link>

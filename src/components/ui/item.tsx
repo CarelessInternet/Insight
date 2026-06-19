@@ -30,6 +30,7 @@ const itemVariants = cva(
 				default: 'border-transparent',
 				outline: 'border-border',
 				muted: 'border-transparent bg-muted/50',
+				warning: 'bg-amber-50 dark:bg-amber-950',
 			},
 			size: {
 				default: 'gap-3.5 px-4 py-3.5',
@@ -74,7 +75,7 @@ const itemMediaVariants = cva(
 		variants: {
 			variant: {
 				default: 'bg-transparent',
-				icon: "[&_svg:not([class*='size-'])]:size-4",
+				icon: "[&_svg:not([class*='size-'])]:size-5",
 				image:
 					'size-10 overflow-hidden rounded-lg group-data-[size=sm]/item:size-8 group-data-[size=xs]/item:size-6 group-data-[size=xs]/item:rounded-md [&_img]:size-full [&_img]:object-cover',
 			},

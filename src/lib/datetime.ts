@@ -1,3 +1,5 @@
+import { getIsomorphicCookie } from './cookie';
+
 // https://park.is/blog_posts/20240803_extracting_timestamp_from_uuid_v7/
 export function extractTimestampFromUUIDv7(uuid: string): Date {
 	const [unix_1, unix_2] = uuid.split('-');
@@ -15,12 +17,13 @@ export function extractTimestampFromUUIDv7(uuid: string): Date {
 	return new Date(timestampInMilliseconds);
 }
 
-const dateFormatter = new Intl.DateTimeFormat('sv-SE', {
-	timeStyle: 'medium',
-	dateStyle: 'short',
-});
-
 export function dateAndTime(date: Date) {
+	const dateFormatter = new Intl.DateTimeFormat('sv-SE', {
+		dateStyle: 'short',
+		timeStyle: 'medium',
+		timeZone: getIsomorphicCookie('timezone') ?? 'UTC',
+	});
+
 	return dateFormatter.format(date);
 }
 

@@ -1,6 +1,5 @@
 import '@tanstack/react-start/server-only';
-
-import { passkey } from '@better-auth/passkey';
+import { getAuthenticatorName, passkey } from '@better-auth/passkey';
 import { APIError, betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { tanstackStartCookies } from 'better-auth/tanstack-start';
@@ -18,24 +17,17 @@ const cache = new Keyv({
 });
 
 const auth = betterAuth({
-	advanced: {
-		database: {
-			generateId: 'uuid',
-		},
-	},
-	database: drizzleAdapter(database, {
-		provider: 'pg',
-		schema,
-	}),
-	emailAndPassword: {
-		enabled: false,
-	},
+	advanced: { database: { generateId: 'uuid' } },
+	database: drizzleAdapter(database, { provider: 'pg', schema }),
+	emailAndPassword: { enabled: false },
 	experimental: { joins: true },
 	plugins: [
-		tanstackStartCookies(),
 		passkey({
+			authenticatorSelection: { residentKey: 'required', userVerification: 'required' },
 			registration: {
-				requireSession: false,
+				afterVerification: async ({ verification }) => ({
+					name: getAuthenticatorName(verification.registrationInfo?.aaguid),
+				}),
 				resolveUser: async ({ context }) => {
 					if (!context) {
 						throw new APIError('BAD_REQUEST', { message: 'Missing passkey context.' });
@@ -43,13 +35,12 @@ const auth = betterAuth({
 
 					const payload = await verifyPasskeyContext(context);
 					const key = toContext(payload.nonce);
-					const used = await auth.options.secondaryStorage.get(key);
+					const storedContext = await auth.options.secondaryStorage.getAndDelete(key);
 
-					if (!used) {
+					if (!storedContext) {
 						throw new APIError('CONFLICT', { message: 'Passkey context is already used or missing.' });
 					}
 
-					await auth.options.secondaryStorage.delete(key);
 					const userRow = await database.query.user.findFirst({
 						where: (table, { eq }) => eq(table.email, payload.email),
 					});
@@ -69,8 +60,12 @@ const auth = betterAuth({
 
 					return { id: user.id, name: user.email, displayName: user?.name };
 				},
+				requireSession: false,
 			},
+			rpID: new URL(environment.BETTER_AUTH_URL).hostname,
+			rpName: 'Insight',
 		}),
+		tanstackStartCookies(),
 	],
 	secondaryStorage: {
 		get: async (key) => await cache.get<string>(key),
@@ -79,14 +74,17 @@ const auth = betterAuth({
 		 */
 		// Keyv stores the TTL in milliseconds while Better-Auth uses seconds, hence the conversion.
 		set: async (key, value, ttl) => await cache.set(key, value, typeof ttl === 'number' ? ttl * 1000 : undefined),
-		delete: async (key) => {
+		delete: async (key) => void cache.delete(key),
+		getAndDelete: async (key) => {
+			// For some reason, (Bun) Redis' getdel method does not work.
+			const value = await cache.get<string>(key);
 			await cache.delete(key);
+
+			return value;
 		},
 	},
-	rateLimit: {
-		enabled: true,
-		storage: 'secondary-storage',
-	},
+	secret: environment.APPLICATION_SECRET,
+	rateLimit: { enabled: true, storage: 'secondary-storage' },
 	session: {
 		cookieCache: {
 			enabled: true,
