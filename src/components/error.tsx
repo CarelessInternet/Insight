@@ -2,7 +2,7 @@ import { type ErrorComponentProps, getRouteApi } from '@tanstack/react-router';
 import { RefreshCcwDot } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { ScrollArea, ScrollAreaContent } from './ui/scroll-area';
+import { ScrollArea, ScrollAreaContent, ScrollAreaViewport, ScrollBar } from './ui/scroll-area';
 
 const Route = getRouteApi('__root__');
 
@@ -21,7 +21,10 @@ export default function ErrorComponent({ error, reset }: ErrorComponentProps) {
 							<p className="mt-4 text-muted-foreground">Error stack:</p>
 							<div className="max-h-96 overflow-y-auto">
 								<ScrollArea>
-									<ScrollAreaContent>{error.stack}</ScrollAreaContent>
+									<ScrollAreaViewport>
+										<ScrollAreaContent>{error.stack}</ScrollAreaContent>
+									</ScrollAreaViewport>
+									<ScrollBar />
 								</ScrollArea>
 							</div>
 						</>

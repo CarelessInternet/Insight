@@ -54,7 +54,7 @@ import type auth from '~/lib/authentication/server';
 import { decrypt } from '~/lib/crypto.server';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount } from '~/lib/database/schema';
-import { dateAndTime, extractTimestampFromUUIDv7 } from '~/lib/datetime';
+import { dateAndTime, extractTimestampFromUUIDv7 } from '~/lib/formatter';
 import logger from '~/lib/logger.server';
 import { sessionMiddleware } from '~/lib/middleware';
 import { type PaginatedQueryResult, paginatedQuery } from '~/lib/query';

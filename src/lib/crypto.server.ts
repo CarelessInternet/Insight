@@ -5,19 +5,8 @@ import { createServerOnlyFn } from '@tanstack/react-start';
 import z from 'zod';
 import { aesPrefix, hmacPrefix, type user } from './database/schema';
 import { environment } from './environment.server';
+import { base64ToBytes, bytesToUtf8 } from './formatter';
 import logger from './logger.server';
-
-// https://zod.dev/codecs?id=base64tobytes
-const base64ToBytes = z.codec(z.base64(), z.instanceof(Uint8Array), {
-	decode: (base64String) => z.util.base64ToUint8Array(base64String),
-	encode: (bytes) => z.util.uint8ArrayToBase64(bytes),
-});
-
-// https://zod.dev/codecs?id=bytestoutf8
-const bytesToUtf8 = z.codec(z.instanceof(Uint8Array), z.string(), {
-	decode: (bytes) => new TextDecoder().decode(bytes),
-	encode: (str) => new TextEncoder().encode(str),
-});
 
 const rootKey = await crypto.subtle.importKey(
 	'raw',

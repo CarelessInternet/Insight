@@ -81,10 +81,7 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 	if ('folders' in folder) {
 		return (
 			<SidebarMenuItem>
-				<Collapsible
-					defaultOpen={!!folder.path && inbox.includes(folder.path)}
-					className="group [&[data-open]>button>div>svg:first-child]:rotate-90"
-				>
+				<Collapsible defaultOpen={!!folder.path && inbox.includes(folder.path)}>
 					<CollapsibleTrigger
 						render={
 							<SidebarMenuButton isActive={isActive}>
@@ -98,7 +95,7 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 									{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
 								</Route.Link>
 								<SidebarMenuBadge>
-									<ChevronRight className="transition-transform" />
+									<ChevronRight className="transition-transform group-data-panel-open/menu-button:rotate-90" />
 								</SidebarMenuBadge>
 							</SidebarMenuButton>
 						}

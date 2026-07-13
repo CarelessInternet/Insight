@@ -1,9 +1,14 @@
+import IframeResizer from '@iframe-resizer/react';
 import { queryOptions, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { and, eq } from 'drizzle-orm';
 import {
 	ChevronDown,
+	ChevronRight,
+	Eye,
+	FileDown,
+	FileText,
 	Flag,
 	FolderTree,
 	Forward,
@@ -11,18 +16,32 @@ import {
 	MailCheck,
 	MailOpen,
 	MessageCircleReply,
+	Paperclip,
 	Reply,
 	ReplyAll,
 	Settings,
 	ShieldAlert,
 	ShieldMinus,
 	Tag,
+	X,
 } from 'lucide-react';
+import type { Attachment as EmailAttachment } from 'postal-mime';
 import { Suspense, useEffect, useRef, useState } from 'react';
+import {
+	Attachment,
+	AttachmentAction,
+	AttachmentActions,
+	AttachmentContent,
+	AttachmentDescription,
+	AttachmentGroup,
+	AttachmentMedia,
+	AttachmentTitle,
+} from '~/components/ui/attachment';
 import { Avatar, AvatarFallback } from '~/components/ui/avatar';
-import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
+import { ButtonGroup } from '~/components/ui/button-group';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/components/ui/collapsible';
 import { Field, FieldLabel } from '~/components/ui/field';
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '~/components/ui/item';
 import {
@@ -35,12 +54,11 @@ import {
 	MenubarTrigger,
 } from '~/components/ui/menubar';
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from '~/components/ui/popover';
-import { ScrollArea, ScrollAreaContent } from '~/components/ui/scroll-area';
+import { ScrollArea, ScrollAreaContent, ScrollAreaViewport, ScrollBar } from '~/components/ui/scroll-area';
 import { Skeleton } from '~/components/ui/skeleton';
 import { Switch } from '~/components/ui/switch';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount } from '~/lib/database/schema';
-import { dateAndTime } from '~/lib/datetime';
 import {
 	getSenderInfo,
 	type MessageFlagsSet,
@@ -49,6 +67,7 @@ import {
 	sanitizeMessageHtml,
 } from '~/lib/email';
 import Email from '~/lib/email.server';
+import { base64ToBytes, bytesToSize, dateAndTime } from '~/lib/formatter';
 import logger from '~/lib/logger.server';
 import { emailMiddleware } from '~/lib/middleware';
 import { invalidateInboxQueryKey } from './-inbox.messages';
@@ -179,7 +198,7 @@ export default function InboxMessage({ messageId }: { messageId: RouteMessageSch
 
 	return (
 		<div className="size-full max-h-[calc(100dvh-var(--header-height))] overflow-hidden p-4">
-			<Card className="size-full pt-0">
+			<Card className="size-full gap-4 pt-0">
 				<Menubar className="rounded-none border-0 border-b bg-accent/40 px-2">
 					<MenubarMenu disabled>
 						<MenubarTrigger className="gap-1.5">
@@ -272,79 +291,158 @@ function MessageContent({ messageId }: { messageId: RouteMessageSchema['messageI
 		return <p>bruh</p>;
 	}
 
-	// TODO: mobile view looks terrible. Fix centering.
+	// https://postal-mime.postalsys.com/docs/examples/email-viewer/#react-email-viewer-component
+	const downloadAttachment = ({
+		content,
+		filename,
+		mimeType,
+	}: Pick<EmailAttachment, 'content' | 'filename' | 'mimeType'>) => {
+		new Uint8Array().toBase64();
+		const bytes =
+			typeof content === 'string'
+				? base64ToBytes.decode(content)
+				: content instanceof Uint8Array
+					? content.toBase64()
+					: new Uint8Array(content);
+		const blob = new Blob([bytes], { type: mimeType });
+		const url = URL.createObjectURL(blob);
+
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = filename || message.source.subject;
+		a.click();
+
+		URL.revokeObjectURL(url);
+	};
+
 	return (
-		// "pr-2" to prevent the scroll-bar from overlapping the message content.
-		<ScrollArea className="size-full overflow-auto data-has-overflow-y:pr-2">
-			<ScrollAreaContent className="flex flex-col gap-4">
-				<Item className="px-6 py-0">
-					<ItemMedia variant="icon">
-						<Avatar className="size-10">
-							<AvatarFallback>{initials}</AvatarFallback>
-						</Avatar>
-					</ItemMedia>
-					<ItemContent className="gap-0">
-						<ItemTitle>
-							<span className="font-semibold text-base">{from}</span>
-							<span className="text-muted-foreground text-sm">{`<${message.source.from?.address}>`}</span>
-						</ItemTitle>
-						<ItemDescription className="flex flex-row gap-1">
-							<span>To: {message.source.deliveredTo}</span>
+		<ScrollArea className="size-full overflow-auto">
+			<ScrollAreaViewport>
+				<ScrollAreaContent className="@container flex flex-col gap-4 px-4 sm:px-6">
+					<Item className="p-0">
+						<ItemMedia variant="icon">
+							<Avatar className="size-10">
+								<AvatarFallback>{initials}</AvatarFallback>
+							</Avatar>
+						</ItemMedia>
+						<ItemContent className="gap-0">
+							<ItemTitle className="@2xl:flex-row flex-col items-baseline @2xl:gap-2 gap-0">
+								<span className="font-semibold text-base">{from}</span>
+								<span className="text-muted-foreground text-sm">{`<${message.source.from?.address}>`}</span>
+							</ItemTitle>
+							<ItemDescription className="flex flex-row gap-1">
+								<span>To: {message.source.deliveredTo}</span>
+								<Popover>
+									<PopoverTrigger
+										render={
+											<Button variant="ghost" size="icon-xs" className="text-foreground">
+												<ChevronDown />
+											</Button>
+										}
+									/>
+									<PopoverContent>
+										<PopoverHeader>
+											<PopoverTitle>Hi</PopoverTitle>
+										</PopoverHeader>
+									</PopoverContent>
+								</Popover>
+							</ItemDescription>
+						</ItemContent>
+						<ItemActions>
 							<Popover>
 								<PopoverTrigger
 									render={
-										<Button variant="ghost" size="icon-xs" className="text-foreground">
-											<ChevronDown />
+										<Button variant="secondary">
+											<Settings /> Settings
 										</Button>
 									}
 								/>
 								<PopoverContent>
 									<PopoverHeader>
-										<PopoverTitle>Hi</PopoverTitle>
+										<PopoverTitle>Configure Message Settings</PopoverTitle>
 									</PopoverHeader>
+									<Field orientation="horizontal">
+										<FieldLabel htmlFor="remote-resources">
+											<ImageIcon className="size-4" /> Allow Remote Resources
+										</FieldLabel>
+										<Switch
+											id="remote-resources"
+											checked={allowRemoteSrc}
+											onCheckedChange={() => {
+												setAllowRemoteSrc((previous) => !previous);
+												setRemoteBlockedNoticeId(messageId);
+											}}
+											disabled={!message.source.html}
+										/>
+									</Field>
 								</PopoverContent>
 							</Popover>
-						</ItemDescription>
-					</ItemContent>
-					<ItemActions>
-						<Popover>
-							<PopoverTrigger
+						</ItemActions>
+					</Item>
+					<CardHeader className="flex @lg:grid @lg:grid-flow-row flex-col gap-0 px-0">
+						<CardTitle className="font-bold text-lg">{message.source.subject}</CardTitle>
+						<CardDescription>
+							on {message.source.date ? dateAndTime(message.source.date) : 'Unknown Date'}
+						</CardDescription>
+					</CardHeader>
+					{message.source.attachments.length > 0 && (
+						// For some reason, making this component a container forces the AttachmentGroup to respect the 100% width.
+						<Collapsible defaultOpen className="@container w-full rounded-lg border">
+							<CollapsibleTrigger
+								nativeButton={false}
 								render={
-									<Button variant="secondary">
-										<Settings /> Settings
-									</Button>
+									<Item size="xs" className="rounded-none">
+										<ItemMedia variant="icon">
+											<Paperclip />
+										</ItemMedia>
+										<ItemContent>
+											<ItemTitle>Attachments</ItemTitle>
+										</ItemContent>
+										<ItemActions>
+											<ChevronRight className="ml-auto transition-transform group-data-panel-open/item:rotate-90" />
+										</ItemActions>
+									</Item>
 								}
 							/>
-							<PopoverContent>
-								<PopoverHeader>
-									<PopoverTitle>Configure Message Settings</PopoverTitle>
-								</PopoverHeader>
-								<Field orientation="horizontal">
-									<FieldLabel htmlFor="remote-resources">
-										<ImageIcon className="size-4" /> Allow Remote Resources
-									</FieldLabel>
-									<Switch
-										id="remote-resources"
-										checked={allowRemoteSrc}
-										onCheckedChange={() => {
-											setAllowRemoteSrc((previous) => !previous);
-											setRemoteBlockedNoticeId(messageId);
-										}}
-										disabled={!message.source.html}
-									/>
-								</Field>
-							</PopoverContent>
-						</Popover>
-					</ItemActions>
-				</Item>
-				<CardHeader className="px-4 sm:px-6">
-					<CardTitle className="font-bold text-lg">{message.source.subject}</CardTitle>
-					<CardAction>
-						<Badge variant="ghost">{message.source.date ? dateAndTime(message.source.date) : 'Unknown Date'}</Badge>
-					</CardAction>
-				</CardHeader>
-				{showRemoteBlockedNotice && (
-					<div className="px-6">
+							<CollapsibleContent className="bg-muted/30 p-2">
+								<AttachmentGroup className="w-full">
+									{message.source.attachments
+										.filter(({ related }) => !related)
+										.map((attachment) => (
+											<Attachment key={attachment.filename}>
+												<AttachmentMedia>
+													<FileText className="size-6" />
+												</AttachmentMedia>
+												<AttachmentContent>
+													<AttachmentTitle className="truncate">{attachment.filename}</AttachmentTitle>
+													<AttachmentDescription>
+														{bytesToSize(
+															(typeof attachment.content === 'string'
+																? Buffer.from(attachment.content)
+																: attachment.content
+															).byteLength,
+														)}{' '}
+														· {attachment.mimeType}
+													</AttachmentDescription>
+												</AttachmentContent>
+												<AttachmentActions>
+													<AttachmentAction aria-label={`Open the preview of ${attachment.filename}`}>
+														<Eye />
+													</AttachmentAction>
+													<AttachmentAction
+														aria-label={`Download ${attachment.filename}`}
+														onClick={() => downloadAttachment(attachment)}
+													>
+														<FileDown />
+													</AttachmentAction>
+												</AttachmentActions>
+											</Attachment>
+										))}
+								</AttachmentGroup>
+							</CollapsibleContent>
+						</Collapsible>
+					)}
+					{showRemoteBlockedNotice && (
 						<Item variant="warning" size="xs" className="w-full">
 							<ItemMedia variant="icon">
 								<ShieldAlert />
@@ -356,34 +454,51 @@ function MessageContent({ messageId }: { messageId: RouteMessageSchema['messageI
 								</ItemDescription>
 							</ItemContent>
 							<ItemActions>
-								<Button
-									size="sm"
-									onClick={() => {
-										setAllowRemoteSrc(true);
-										setRemoteBlockedNoticeId(messageId);
-									}}
-								>
-									<ShieldMinus data-icon="inline-start" />
-									Allow Remote Resources
-								</Button>
+								<ButtonGroup aria-label="Remote resources warning message actions">
+									<Button
+										size="sm"
+										onClick={() => {
+											setAllowRemoteSrc(true);
+											setRemoteBlockedNoticeId(messageId);
+										}}
+									>
+										<ShieldMinus data-icon="inline-start" />
+										Allow Remote
+									</Button>
+									<Button
+										variant="secondary"
+										size="sm"
+										onClick={() => {
+											setAllowRemoteSrc(false);
+											setRemoteBlockedNoticeId(messageId);
+										}}
+									>
+										<X data-icon="inline-start" /> Close
+									</Button>
+								</ButtonGroup>
 							</ItemActions>
 						</Item>
-					</div>
-				)}
-				<CardContent className="size-full px-4 sm:px-6">
-					{messageHtml ? (
-						<iframe
-							srcDoc={replaceInlineImages(messageHtml, message.source.attachments)}
-							title={message.source.subject}
-							sandbox=""
-							referrerPolicy="no-referrer"
-							className="size-full"
-						/>
-					) : (
-						<p className="wrap-anywhere whitespace-pre-wrap text-wrap">{message.source.text}</p>
 					)}
-				</CardContent>
-			</ScrollAreaContent>
+					<CardContent className="size-full px-0">
+						{messageHtml ? (
+							<IframeResizer
+								suppressHydrationWarning
+								// https://iframe-resizer.com/gpl/
+								license="GPLv3"
+								log="collapsed"
+								srcDoc={replaceInlineImages(messageHtml, message.source.attachments)}
+								title={message.source.subject}
+								sandbox="allow-scripts"
+								referrerPolicy="no-referrer"
+								className="h-screen w-full rounded-2xl"
+							/>
+						) : (
+							<p className="wrap-anywhere whitespace-pre-wrap text-wrap">{message.source.text}</p>
+						)}
+					</CardContent>
+				</ScrollAreaContent>
+			</ScrollAreaViewport>
+			<ScrollBar />
 		</ScrollArea>
 	);
 }

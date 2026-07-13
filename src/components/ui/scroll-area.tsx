@@ -4,15 +4,28 @@ import { cn } from '~/lib/utils';
 function ScrollArea({ className, children, ...props }: ScrollAreaPrimitive.Root.Props) {
 	return (
 		<ScrollAreaPrimitive.Root data-slot="scroll-area" className={cn('relative', className)} {...props}>
-			<ScrollAreaPrimitive.Viewport
-				data-slot="scroll-area-viewport"
-				className="size-full rounded-[inherit] outline-none transition-[color,box-shadow] focus-visible:outline-1 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-			>
-				{children}
-			</ScrollAreaPrimitive.Viewport>
-			<ScrollBar />
+			{children}
 			<ScrollAreaPrimitive.Corner />
 		</ScrollAreaPrimitive.Root>
+	);
+}
+
+function ScrollAreaViewport({ className, ...props }: ScrollAreaPrimitive.Viewport.Props) {
+	return (
+		<ScrollAreaPrimitive.Viewport
+			data-slot="scroll-area-viewport"
+			className={cn(
+				'size-full rounded-[inherit] outline-none transition-[color,box-shadow] focus-visible:outline-1 focus-visible:ring-[3px] focus-visible:ring-ring/50',
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+function ScrollAreaContent({ className, ...props }: ScrollAreaPrimitive.Content.Props) {
+	return (
+		<ScrollAreaPrimitive.Content data-slot="scroll-area-content" className={cn('size-full', className)} {...props} />
 	);
 }
 
@@ -33,10 +46,4 @@ function ScrollBar({ className, orientation = 'vertical', ...props }: ScrollArea
 	);
 }
 
-function ScrollAreaContent({ className, ...props }: ScrollAreaPrimitive.Content.Props) {
-	return (
-		<ScrollAreaPrimitive.Content data-slot="scroll-area-content" className={cn('size-full', className)} {...props} />
-	);
-}
-
-export { ScrollArea, ScrollAreaContent, ScrollBar };
+export { ScrollArea, ScrollAreaContent, ScrollAreaViewport, ScrollBar };

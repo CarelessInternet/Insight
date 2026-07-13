@@ -114,13 +114,21 @@ export function sanitizeMessageHtml(html: string | undefined, allowRemoteSrc: bo
 	addHook('uponSanitizeAttribute', uponSanitizeAttribute);
 
 	// https://postal-mime.postalsys.com/docs/guides/security#5-sanitize-html-content
-	const sanitized = sanitize(html, {
-		WHOLE_DOCUMENT: true,
+	const document = sanitize(html, {
 		FORBID_ATTR: allowRemoteSrc ? [] : ['src'],
-	});
+		RETURN_DOM: true,
+		WHOLE_DOCUMENT: true,
+	}) as HTMLHtmlElement;
+
+	// I really do not like doing this security-wise but it is necessary for a better experience.
+	const script = document.ownerDocument.createElement('script');
+	// https://iframe-resizer.com/setup/child/#usage
+	script.src = '/node_modules/@iframe-resizer/child/index.umd.js';
+	script.async = true;
+	document.querySelector('head')?.appendChild(script);
 
 	removeHook('afterSanitizeAttributes', afterSanitizeAttributes);
 	removeHook('uponSanitizeAttribute', uponSanitizeAttribute);
 
-	return { messageHtml: sanitized, sawRemoteSrc };
+	return { messageHtml: document.outerHTML, sawRemoteSrc };
 }
