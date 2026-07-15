@@ -22,6 +22,7 @@ export const inbox = z.string();
 export const messageId = z.number();
 
 export const getMessageSchema = z.object({ inbox, messageId });
+export type GetMessageSchema = z.infer<typeof getMessageSchema>;
 
 export const searchMessageSchema = z.object({
 	value: z.string(),
@@ -69,15 +70,19 @@ export function getSenderInfo(address: MessageEnvelopeObject['from'] | Address) 
 	};
 }
 
+export function getAttachmentBytes(content: Attachment['content']) {
+	return typeof content === 'string' ? Uint8Array.fromBase64(content) : new Uint8Array(content);
+}
+
 // https://postal-mime.postalsys.com/docs/examples/email-viewer#react-email-viewer-component
 export function replaceInlineImages(html: string, attachments: Attachment[]) {
 	let result = html;
 
 	attachments
 		.filter((a) => a.related && a.contentId)
-		.forEach((att) => {
-			const cid = att.contentId?.replace(/^<|>$/g, '');
-			const dataUrl = `data:${att.mimeType};base64,${att.content}`;
+		.forEach(({ contentId, content, mimeType }) => {
+			const cid = contentId?.replace(/^<|>$/g, '');
+			const dataUrl = `data:${mimeType};base64,${getAttachmentBytes(content).toBase64()}`;
 
 			result = result.replace(new RegExp(`cid:${cid}`, 'gi'), dataUrl);
 		});

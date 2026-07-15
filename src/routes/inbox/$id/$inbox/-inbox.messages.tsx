@@ -21,7 +21,7 @@ const Route = getRouteApi('/inbox/$id/$inbox/');
 
 const fetchInbox = createServerFn({ method: 'GET' })
 	.validator(routeSearchSchema)
-	.middleware([emailMiddleware({ decrypt: true })])
+	.middleware([emailMiddleware])
 	.handler(async ({ context: { email, user }, data }) => {
 		await using imapEmail = new Email({
 			email: email.email,
@@ -71,6 +71,7 @@ export default function InboxMessages() {
 		data: { data: messages },
 	} = useSuspenseQuery(inboxOptions({ ...parameters, ...search }));
 
+	// TODO: reset scroll position on new page.
 	return (
 		<ScrollArea className="@container flex flex-col overflow-y-auto">
 			<ScrollAreaViewport>

@@ -1,9 +1,10 @@
-import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
+import { type QueryKey, queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq } from 'drizzle-orm';
 import type { ListTreeResponse } from 'imapflow';
 import { Archive, ArchiveX, ChevronRight, Folder, Inbox, Mail, Send, SquarePen, Trash } from 'lucide-react';
+import { Badge } from '~/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/components/ui/collapsible';
 import {
 	SidebarGroup,
@@ -25,7 +26,7 @@ import { emailMiddleware } from '~/lib/middleware';
 const Route = getRouteApi('/inbox/$id/$inbox/');
 
 const fetchFolders = createServerFn({ method: 'GET' })
-	.middleware([emailMiddleware({ decrypt: true })])
+	.middleware([emailMiddleware])
 	.handler(async ({ context: { email, user } }) => {
 		await using imapEmail = new Email({
 			email: email.email,
@@ -48,9 +49,12 @@ const fetchFolders = createServerFn({ method: 'GET' })
 		return folders;
 	});
 
+const foldersQueryKey = 'email-inbox-folders' as const;
+export const invalidateFoldersQueryKey = (id: EmailId) => [foldersQueryKey, id] satisfies QueryKey;
+
 export const foldersOptions = (id: EmailId) =>
 	queryOptions({
-		queryKey: ['email-inbox-folders', id],
+		queryKey: [foldersQueryKey, id],
 		queryFn: () => fetchFolders({ data: { id } }),
 	});
 
@@ -84,7 +88,8 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 				<Collapsible defaultOpen={!!folder.path && inbox.includes(folder.path)}>
 					<CollapsibleTrigger
 						render={
-							<SidebarMenuButton isActive={isActive}>
+							<SidebarMenuButton isActive={isActive} className="pl-2">
+								<ChevronRight className="transition-transform group-data-panel-open/menu-button:rotate-90 [[data-side=left][data-state=collapsed]_&]:hidden" />
 								<Route.Link
 									to="/inbox/$id/$inbox"
 									params={{ id, inbox: folder.path }}
@@ -94,9 +99,11 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 									{folder.specialUse === '\\Inbox' ? FolderIcon({ specialUse: folder.specialUse }) : <Folder />}
 									{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
 								</Route.Link>
-								<SidebarMenuBadge>
-									<ChevronRight className="transition-transform group-data-panel-open/menu-button:rotate-90" />
-								</SidebarMenuBadge>
+								{Number(folder.status?.unseen) > 0 && (
+									<SidebarMenuBadge>
+										<Badge>{folder.status?.unseen}</Badge>
+									</SidebarMenuBadge>
+								)}
 							</SidebarMenuButton>
 						}
 					/>
@@ -127,6 +134,11 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 					>
 						<FolderIcon specialUse={folder.specialUse} />
 						{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
+						{Number(folder.status?.unseen) > 0 && (
+							<SidebarMenuBadge>
+								<Badge>{folder.status?.unseen}</Badge>
+							</SidebarMenuBadge>
+						)}
 					</Route.Link>
 				}
 			/>

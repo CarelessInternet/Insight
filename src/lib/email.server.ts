@@ -64,7 +64,7 @@ export default class Email implements AsyncDisposable {
 	}
 
 	public async getMailboxes() {
-		return await this.client.listTree();
+		return await this.client.listTree({ statusQuery: { unseen: true } });
 	}
 
 	public async getPaginatedMailboxMessages(parameters: z.infer<typeof paginatedEmailMessagesSchema>) {
@@ -123,20 +123,30 @@ export default class Email implements AsyncDisposable {
 
 		const email = await PostalMime.parse(message.source, {
 			// https://postal-mime.postalsys.com/docs/getting-started/configuration#security-recommendations
+			attachmentEncoding: 'arraybuffer',
 			forceRfc822Attachments: true,
 			maxHeadersSize: 524288,
 			maxNestingDepth: 50,
 		});
 
 		return {
-			imap: { ...message },
+			imap: message,
 			// https://postal-mime.postalsys.com/docs/examples/basic-parsing#complete-email-parser-function
 			source: {
 				...email,
+				date: email.date ? new Date(email.date) : undefined,
 				subject: getSubject(email.subject),
-				date: email.date ? new Date(email.date) : null,
 			},
 		};
+	}
+
+	public async getMessageSource(parameters: z.infer<typeof getMessageSchema>) {
+		const { inbox, messageId } = getMessageSchema.parse(parameters);
+		using _ = await this.getMailbox(inbox);
+
+		const message = await this.client.fetchOne(messageId, { source: true }, { uid: true });
+
+		return message ? message.source : null;
 	}
 
 	public async addMessageFlags(parameters: z.infer<typeof setMessageFlagsSchema>) {

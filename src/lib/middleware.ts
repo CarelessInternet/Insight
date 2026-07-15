@@ -32,26 +32,24 @@ export const sessionMiddleware = createMiddleware({ type: 'request' }).server(
 export const emailMiddlewareSchema = z.object({ id: emailAccountSelectSchema.shape.id });
 export type EmailMiddlewareSchema = z.infer<typeof emailMiddlewareSchema>;
 
-export function emailMiddleware({ decrypt }: { decrypt: boolean }) {
-	return createMiddleware({ type: 'function' })
-		.middleware([sessionMiddleware])
-		.validator(emailMiddlewareSchema.loose())
-		.server(async ({ context, data, next, serverFnMeta: { name } }) => {
-			let email = await database.query.emailAccount.findFirst({
-				where: (field, { and, eq }) =>
-					and(eq(field.userId, context.user.id), eq(field.id, data.id), eq(field.status, 'valid')),
-			});
-
-			if (!email) {
-				logger.warn('[%s] The email:%s could not be found or is invalid', name, data.id);
-				throw redirect({ to: '/account/settings' });
-			}
-
-			email = {
-				...email,
-				...(decrypt && (await Email.decryptCredentials(email))),
-			};
-
-			return await next({ context: { email } });
+export const emailMiddleware = createMiddleware({ type: 'function' })
+	.middleware([sessionMiddleware])
+	.validator(emailMiddlewareSchema.loose())
+	.server(async ({ context, data, next, serverFnMeta: { name } }) => {
+		let email = await database.query.emailAccount.findFirst({
+			where: (field, { and, eq }) =>
+				and(eq(field.userId, context.user.id), eq(field.id, data.id), eq(field.status, 'valid')),
 		});
-}
+
+		if (!email) {
+			logger.warn('[%s] The email:%s could not be found or is invalid', name, data.id);
+			throw redirect({ to: '/account/settings' });
+		}
+
+		email = {
+			...email,
+			...(await Email.decryptCredentials(email)),
+		};
+
+		return await next({ context: { email } });
+	});

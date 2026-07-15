@@ -12,7 +12,7 @@ export default function ErrorComponent({ error, reset }: ErrorComponentProps) {
 			<Card className="size-full max-w-4xl">
 				<CardHeader className="text-center">
 					<CardTitle>An Unexpected Error Occurred!</CardTitle>
-					<CardDescription>{error.name}</CardDescription>
+					<CardDescription className="whitespace-pre-wrap">{error.name}</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<p className="font-extrabold">{error.message}</p>
@@ -22,7 +22,9 @@ export default function ErrorComponent({ error, reset }: ErrorComponentProps) {
 							<div className="max-h-96 overflow-y-auto">
 								<ScrollArea>
 									<ScrollAreaViewport>
-										<ScrollAreaContent>{error.stack}</ScrollAreaContent>
+										<ScrollAreaContent>
+											<pre>{error.stack}</pre>
+										</ScrollAreaContent>
 									</ScrollAreaViewport>
 									<ScrollBar />
 								</ScrollArea>
