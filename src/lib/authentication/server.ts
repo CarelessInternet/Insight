@@ -8,12 +8,12 @@ import { verifyPasskeyContext } from '../crypto.server';
 import { database } from '../database/drizzle.server';
 import * as schema from '../database/schema';
 import { environment } from '../environment.server';
+import KeyvRedis from '../redis';
 import { toContext } from './passkeyContext';
-import KeyvRedis from './redis';
 
 const cache = new Keyv({
+	namespace: 'better-auth',
 	store: environment.REDIS_URL ? new KeyvRedis({ url: environment.REDIS_URL }) : new Map(),
-	namespace: 'better-auth:',
 });
 
 const auth = betterAuth({

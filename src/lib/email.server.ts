@@ -1,12 +1,15 @@
+import { Readable } from 'node:stream';
 import { ImapFlow, type SearchObject } from 'imapflow';
 import PostalMime from 'postal-mime';
-import type z from 'zod';
+import z from 'zod';
 import { decrypt } from './crypto.server';
 import {
 	type EmailCredentialsSchema,
 	inbox as emailInbox,
+	findAttachments,
 	getMessageSchema,
 	getSubject,
+	messageFlagColoursSchema,
 	paginatedEmailMessagesSchema,
 	type searchMessageFilters,
 	setMessageFlagsSchema,
@@ -14,6 +17,9 @@ import {
 import logger from './logger.server';
 import type { PaginatedQueryResult } from './query';
 
+const getAttachmentSchema = getMessageSchema.extend({ part: z.string() });
+
+// TODO: rewrite to allow for a cache of IMAP connections. May change from class to function.
 export default class Email implements AsyncDisposable {
 	private client: ImapFlow;
 
@@ -114,10 +120,14 @@ export default class Email implements AsyncDisposable {
 		const { inbox, messageId } = getMessageSchema.parse(parameters);
 		using _ = await this.getMailbox(inbox);
 
-		const message = await this.client.fetchOne(messageId, { flags: true, source: true }, { uid: true });
+		const message = await this.client.fetchOne(
+			messageId,
+			{ bodyStructure: true, flags: true, source: true },
+			{ uid: true },
+		);
 
 		// biome-ignore lint/complexity/useOptionalChain: Optional chaining does not work on type false.
-		if (!message || !message.source) {
+		if (!message || !message.bodyStructure || !message.source) {
 			return null;
 		}
 
@@ -130,13 +140,15 @@ export default class Email implements AsyncDisposable {
 		});
 
 		return {
-			imap: message,
+			flags: message.flags,
 			// https://postal-mime.postalsys.com/docs/examples/basic-parsing#complete-email-parser-function
 			source: {
 				...email,
+				attachments: findAttachments(message.bodyStructure),
 				date: email.date ? new Date(email.date) : undefined,
 				subject: getSubject(email.subject),
 			},
+			uid: message.uid,
 		};
 	}
 
@@ -149,11 +161,34 @@ export default class Email implements AsyncDisposable {
 		return message ? message.source : null;
 	}
 
+	public async getMessageAttachment(parameters: z.infer<typeof getAttachmentSchema>) {
+		const { inbox, messageId, part } = getAttachmentSchema.parse(parameters);
+		using _ = await this.getMailbox(inbox);
+
+		const attachment = await this.client.download(messageId, part, { uid: true });
+
+		return attachment ? { blob: await Readable.toWeb(attachment.content).blob(), meta: attachment.meta } : null;
+	}
+
 	public async addMessageFlags(parameters: z.infer<typeof setMessageFlagsSchema>) {
 		const { flags, inbox, messageId } = setMessageFlagsSchema.parse(parameters);
 		using _ = await this.getMailbox(inbox);
 
 		return await this.client.messageFlagsAdd(messageId, [...flags], { uid: true });
+	}
+
+	public async removeMessageFlags(parameters: z.infer<typeof setMessageFlagsSchema>) {
+		const { flags, inbox, messageId } = setMessageFlagsSchema.parse(parameters);
+		using _ = await this.getMailbox(inbox);
+
+		return await this.client.messageFlagsRemove(messageId, [...flags], { uid: true });
+	}
+
+	public async setMessageFlagColour(parameters: z.infer<typeof messageFlagColoursSchema>) {
+		const { colour, inbox, messageId } = messageFlagColoursSchema.parse(parameters);
+		using _ = await this.getMailbox(inbox);
+
+		return await this.client.setFlagColor(messageId, colour, { uid: true });
 	}
 
 	public async [Symbol.asyncDispose]() {

@@ -2,7 +2,7 @@ import { type QueryKey, queryOptions, useSuspenseQuery } from '@tanstack/react-q
 import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq } from 'drizzle-orm';
-import { Inbox } from 'lucide-react';
+import { Flag, Inbox } from 'lucide-react';
 import { Avatar, AvatarFallback } from '~/components/ui/avatar';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '~/components/ui/empty';
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '~/components/ui/item';
@@ -20,8 +20,8 @@ import { type RouteSearchSchema, routeSearchSchema } from './-route.schema';
 const Route = getRouteApi('/inbox/$id/$inbox/');
 
 const fetchInbox = createServerFn({ method: 'GET' })
-	.validator(routeSearchSchema)
 	.middleware([emailMiddleware])
+	.validator(routeSearchSchema)
 	.handler(async ({ context: { email, user }, data }) => {
 		await using imapEmail = new Email({
 			email: email.email,
@@ -71,7 +71,7 @@ export default function InboxMessages() {
 		data: { data: messages },
 	} = useSuspenseQuery(inboxOptions({ ...parameters, ...search }));
 
-	// TODO: reset scroll position on new page.
+	// TODO: reset scroll position on new page. Scroll restoration makes this difficult.
 	return (
 		<ScrollArea className="@container flex flex-col overflow-y-auto">
 			<ScrollAreaViewport>
@@ -85,13 +85,13 @@ export default function InboxMessages() {
 								<Item
 									key={message.uid}
 									variant="outline"
-									className="rounded-none not-data-seen:border-l-5 not-data-seen:border-l-muted-foreground not-data-seen:pl-3 odd:bg-card/90"
-									{...(seen ? { 'data-seen': seen } : {})}
+									className="rounded-none not-data-seen:border-l-5 not-data-seen:border-l-muted-foreground not-data-seen:pl-3 odd:bg-muted odd:dark:bg-card/90"
+									{...(seen && { 'data-seen': seen })}
 									render={
 										<Route.Link
-											search={{ messageId: message.uid }}
-											preload={false}
 											activeOptions={{ includeSearch: true }}
+											preload={false}
+											search={{ messageId: message.uid }}
 											className="data-[status=active]:border-l-5 data-[status=active]:border-l-primary data-[status=active]:pl-3"
 										/>
 									}
@@ -104,7 +104,19 @@ export default function InboxMessages() {
 									<ItemContent>
 										<ItemDescription className="flex w-full @sm:flex-row flex-col items-baseline justify-between gap-0">
 											<Tooltip>
-												<TooltipTrigger render={<span>{from}</span>} />
+												<TooltipTrigger
+													render={
+														<span className="inline-flex items-center gap-1">
+															<span>{from}</span>
+															{message.flags?.has(messageFlags.enum.Flagged) && (
+																<Flag
+																	className="size-4"
+																	style={{ fill: message.flagColor ?? 'tomato', stroke: message.flagColor ?? 'tomato' }}
+																/>
+															)}
+														</span>
+													}
+												/>
 												<TooltipContent>
 													<p>{message.envelope?.from?.map((sender) => `<${sender.address}>`).join(', ')}</p>
 												</TooltipContent>
@@ -112,7 +124,7 @@ export default function InboxMessages() {
 											<Tooltip>
 												<TooltipTrigger
 													render={
-														<span className="text-muted-foreground/80" suppressHydrationWarning>
+														<span suppressHydrationWarning className="text-muted-foreground/80">
 															{message.envelope?.date ? relativeTime(message.envelope.date) : 'Unknown Date'}
 														</span>
 													}

@@ -69,7 +69,7 @@ export function relativeTime(timestamp: Date) {
 
 // https://www.xjavascript.com/blog/correct-way-to-convert-size-in-bytes-to-kb-mb-gb-in-javascript/#full-basic-implementation
 // Binary units (1024-based).
-const BINARY_UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'].map((unit, index) => ({ name: unit, scale: 1024 ** index }));
+const BINARY_UNITS = ['B', 'kB', 'MB', 'GB', 'TB', 'PB'].map((unit, index) => ({ name: unit, scale: 1024 ** index }));
 
 export function bytesToSize(bytes: number) {
 	// biome-ignore lint/style/noNonNullAssertion: It is not null.

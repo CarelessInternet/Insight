@@ -1,4 +1,4 @@
-import { createFileRoute, retainSearchParams } from '@tanstack/react-router';
+import { createFileRoute, retainSearchParams, useHydrated } from '@tanstack/react-router';
 import { createIsomorphicFn } from '@tanstack/react-start';
 import { getRequestHeader } from '@tanstack/react-start/server';
 import { useDefaultLayout } from 'react-resizable-panels';
@@ -43,10 +43,10 @@ function RouteComponent() {
 	const { messageId } = Route.useSearch();
 	const { open } = useSidebar();
 
+	const hydrated = useHydrated();
 	const isRenderedMobile = useIsMobile();
 	const isIsomorphicMobile = Route.useLoaderData();
-	// TODO: changing from toggled mobile view to desktop renders mobile view.
-	const isMobile = isIsomorphicMobile || isRenderedMobile;
+	const isMobile = hydrated ? isRenderedMobile : isIsomorphicMobile || isRenderedMobile;
 
 	const inboxPanelId = 'inbox';
 	const messagePanelId = 'message';
@@ -60,6 +60,8 @@ function RouteComponent() {
 		panelIds: messageId ? [inboxPanelId, messagePanelId] : [inboxPanelId],
 	});
 
+	// BUG: reazt-resizable-panels, when the inbox panel size is 0%, renders the incorrect size (50% vs 0%)
+	// with a specified defaultSize, and an incorrect size with no defaultSize (~9px vs 0%).
 	return (
 		<ResizablePanelGroup
 			orientation={isMobile ? 'vertical' : 'horizontal'}
@@ -70,6 +72,7 @@ function RouteComponent() {
 				id={inboxPanelId}
 				defaultSize={messageId ? '50%' : '100%'}
 				minSize={open ? '30%' : '25%'}
+				groupResizeBehavior="preserve-relative-size"
 				collapsible
 			>
 				<Inbox />
@@ -77,7 +80,7 @@ function RouteComponent() {
 			{messageId && (
 				<>
 					<ResizableHandle withHandle />
-					<ResizablePanel id={messagePanelId} defaultSize={isMobile ? '100%' : '75%'} minSize="50%">
+					<ResizablePanel id={messagePanelId} defaultSize={isMobile ? '100%' : '75%'} minSize="50%" collapsible>
 						<InboxMessage messageId={messageId} />
 					</ResizablePanel>
 				</>

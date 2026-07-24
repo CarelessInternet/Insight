@@ -1,5 +1,5 @@
 import { useForm } from '@tanstack/react-form';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getRouteApi, useHydrated } from '@tanstack/react-router';
 import {
 	ArrowUpDown,
@@ -40,6 +40,7 @@ import { isInvalidField } from '~/lib/forms';
 import { useDebouncedSyncedState } from '~/lib/hooks/use-debounced';
 import InboxMessages, { inboxOptions } from './-inbox.messages';
 import { type RouteSearchSchema, routeSearchSchema } from './-route.schema';
+import { invalidateInboxAndFolders } from './-utils';
 
 const Route = getRouteApi('/inbox/$id/$inbox/');
 
@@ -82,11 +83,8 @@ export default function Inbox() {
 	const { openMobile, isMobile, toggleSidebar } = useSidebar();
 	const hydrated = useHydrated();
 
-	const {
-		data: rowCount,
-		isRefetching,
-		refetch,
-	} = useQuery({
+	const queryClient = useQueryClient();
+	const { data: rowCount, isRefetching } = useQuery({
 		...inboxOptions({ ...parameters, ...search }),
 		// Keep the previous data while the current data is being refetched.
 		// Useful for keeping the row count as is instead of defaulting back to undefined.
@@ -103,7 +101,7 @@ export default function Inbox() {
 	const initialSearchValues: SearchMessageSchema = {
 		filterBy: searchMessageFilters.from,
 		value: search.search?.value ?? '',
-	} satisfies SearchMessageSchema;
+	};
 
 	const form = useForm({
 		defaultValues: initialSearchValues,
@@ -133,6 +131,7 @@ export default function Inbox() {
 		}
 	}, [search.search, form.resetField]);
 
+	// TODO: add only flagged setting to filters.
 	return (
 		<div className="@container flex h-full max-h-[calc(100dvh-var(--header-height))] flex-col overflow-hidden">
 			<div className="flex-none">
@@ -144,7 +143,11 @@ export default function Inbox() {
 								Sidebar
 							</Button>
 						)}
-						<Button className="grow rounded-none border-none" onClick={() => refetch()} disabled={isRefetching}>
+						<Button
+							className="grow rounded-none border-none"
+							onClick={() => void invalidateInboxAndFolders(queryClient, parameters)}
+							disabled={isRefetching}
+						>
 							{isRefetching ? <Spinner data-icon="inline-start" /> : <RefreshCcw data-icon="inline-start" />}
 							Refresh
 						</Button>

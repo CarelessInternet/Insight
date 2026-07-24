@@ -7,10 +7,12 @@ import {
 	type Appearance,
 	defaultAppearance,
 	getAppearance,
+	isDarkMediaKey,
 	type Palette,
 	setAppearance,
 	type Theme,
 } from '~/lib/appearance';
+import { matchesMediaQuery } from '~/lib/hooks/use-media-query';
 
 const AppearanceContext = createContext<{
 	theme: Theme;
@@ -46,8 +48,8 @@ export function AppearanceProvider({ children }: PropsWithChildren) {
 		const applyDark = (isDark: boolean) => root.classList.toggle('dark', isDark);
 
 		if (appearance.theme === 'system') {
-			const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-			const sync = () => applyDark(mediaQuery.matches);
+			const mediaQuery = window.matchMedia(isDarkMediaKey);
+			const sync = () => applyDark(matchesMediaQuery(mediaQuery));
 
 			sync();
 			mediaQuery.addEventListener('change', sync);

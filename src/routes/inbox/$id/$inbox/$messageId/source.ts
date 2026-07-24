@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq } from 'drizzle-orm';
+import z from 'zod';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount, user } from '~/lib/database/schema';
-import { type GetMessageSchema, getMessageSchema } from '~/lib/email';
+import { getMessageSchema } from '~/lib/email';
 import Email from '~/lib/email.server';
 import { emailMiddleware } from '~/lib/middleware';
 
@@ -16,8 +17,8 @@ export const Route = createFileRoute('/inbox/$id/$inbox/$messageId/source')({
 		handlers: {
 			async GET({ params }) {
 				const parameters = getMessageSchema
-					.loose()
-					.parse({ ...params, messageId: Number(params.messageId) } satisfies GetMessageSchema);
+					.extend({ id: z.string() })
+					.parse({ ...params, messageId: Number(params.messageId) });
 				const email = await getEmailCredentials({ data: params });
 
 				await using imapEmail = new Email({

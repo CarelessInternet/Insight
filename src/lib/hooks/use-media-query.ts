@@ -3,12 +3,10 @@
 
 import { useEffect, useState } from 'react';
 
-type State = boolean | undefined;
-
 export const matchesMediaQuery = (mql: MediaQueryList | MediaQueryListEvent) => mql.matches;
 
-export function useMediaQuery(query: string, initialValue?: () => State | State) {
-	const [matches, setMatches] = useState<State>(initialValue);
+export function useMediaQuery(query: string, initialValue?: () => boolean) {
+	const [matches, setMatches] = useState(initialValue ?? false);
 
 	useEffect(() => {
 		try {

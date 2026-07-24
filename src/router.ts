@@ -12,12 +12,13 @@ export function getRouter() {
 		// It is in practice not optional despite what is said here: https://tanstack.com/router/latest/docs/integrations/query#setup
 		// Cached data is not shared with all users because getRouter is unique per SSR request.
 		context: { queryClient },
-		scrollRestoration: true,
 		defaultErrorComponent: ErrorComponent,
 		defaultPreload: 'intent',
 		// https://tanstack.com/router/latest/docs/guide/preloading#preloading-with-external-libraries
 		defaultPreloadStaleTime: 0,
 		defaultViewTransition: true,
+		scrollRestoration: true,
+		scrollRestorationBehavior: 'smooth',
 	});
 
 	setupRouterSsrQueryIntegration({

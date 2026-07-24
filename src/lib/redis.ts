@@ -3,7 +3,7 @@
 import { EventEmitter } from 'node:events';
 import { RedisClient } from 'bun';
 import type { KeyvStoreAdapter } from 'keyv';
-import type { environment } from '../environment.server';
+import type { environment } from './environment.server';
 
 type KeyvStorageGetResult<Value> = { value?: Value; expires?: number } | undefined;
 

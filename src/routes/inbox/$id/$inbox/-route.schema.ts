@@ -2,7 +2,7 @@ import z from 'zod';
 import { messageId, paginatedEmailMessagesSchema } from '~/lib/email';
 import { emailMiddlewareSchema } from '~/lib/middleware';
 
-export const routeSchema = emailMiddlewareSchema.safeExtend({
+export const routeSchema = emailMiddlewareSchema.extend({
 	// https://github.com/colinhacks/zod/discussions/4934#discussioncomment-13858053
 	inbox: z.union([
 		z.literal('INBOX'),
@@ -21,7 +21,7 @@ export type RouteMessageSchema = z.infer<typeof routeMessageSchema>;
 
 export const searchSchema = paginatedEmailMessagesSchema
 	.omit({ inbox: true })
-	.safeExtend({ messageId: messageId.optional() });
+	.extend({ messageId: messageId.optional() });
 
 export type SearchSchema = z.infer<typeof searchSchema>;
 

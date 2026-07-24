@@ -9,6 +9,7 @@
 		"vscode": {
 			"extensions": [
 				"ms-azuretools.vscode-containers",
+				"TypeScriptTeam.native-preview",
 				"biomejs.biome",
 				"bradlc.vscode-tailwindcss",
 				"wix.vscode-import-cost",
@@ -21,6 +22,7 @@
 				"editor.codeActionsOnSave": {
 					"source.fixAll.biome": "explicit"
 				},
+				"js/ts.experimental.useTsgo": true,
 				"js/ts.tsdk.path": "node_modules/typescript/lib",
 				"json.schemaDownload.trustedDomains": {
 					"https://ui.shadcn.com/schema.json": true

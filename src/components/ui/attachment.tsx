@@ -161,7 +161,6 @@ function AttachmentTrigger({ className, render, type, ...props }: useRender.Comp
 
 function AttachmentGroup({ children, className, ...props }: React.ComponentProps<'div'>) {
 	return (
-		// TODO: Bug in Base UI? Scroll is stuck until snapping occurs. If fixed, remove scroll-smooth.
 		<ScrollArea className={cn(className)} {...props}>
 			<ScrollAreaViewport className="scroll-fade-x scroll-fade-1 min-w-0 snap-x snap-mandatory scroll-px-1 overscroll-x-contain scroll-smooth">
 				<ScrollAreaContent className="flex gap-3 *:data-[slot=attachment]:flex-none *:data-[slot=attachment]:snap-center">

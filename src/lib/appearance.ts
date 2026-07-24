@@ -34,6 +34,8 @@ export const defaultAppearance = { theme: 'system', palette: 'default' } as cons
 export type Theme = Appearance['theme'];
 export type Palette = Appearance['palette'];
 
+export const isDarkMediaKey = '(prefers-color-scheme: dark)';
+
 export const getAppearance = createClientOnlyFn(() => {
 	try {
 		return appearance.decode(localStorage.getItem(storageKey) || '');
@@ -46,12 +48,14 @@ export const setAppearance = createClientOnlyFn((data: Appearance) =>
 	localStorage.setItem(storageKey, appearance.encode(data)),
 );
 
-function appearanceScriptCode(storageKey: string, defaultAppearance: Appearance) {
+export const isDarkTheme = createClientOnlyFn(() => document.documentElement.classList.contains('dark'));
+
+// Imported modules cannot be used here.
+function appearanceScriptCode(storageKey: string, defaultAppearance: Appearance, mediaKey: string) {
 	const storage = localStorage.getItem(storageKey);
 	const appearance = storage ? JSON.parse(storage) : defaultAppearance;
 
-	const dark =
-		appearance.theme === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : appearance.theme === 'dark';
+	const dark = appearance.theme === 'system' ? matchMedia(mediaKey).matches : appearance.theme === 'dark';
 
 	const root = document.documentElement;
 	root.dataset.palette = appearance.palette;
@@ -60,5 +64,6 @@ function appearanceScriptCode(storageKey: string, defaultAppearance: Appearance)
 
 export const appearanceScript = `(${appearanceScriptCode})(
 	${JSON.stringify(storageKey)},
-	${JSON.stringify(defaultAppearance)}
+	${JSON.stringify(defaultAppearance)},
+	${JSON.stringify(isDarkMediaKey)}
 )`;

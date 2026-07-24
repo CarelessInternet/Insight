@@ -10,23 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as InboxIndexRouteImport } from './routes/inbox/index'
-import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
+import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
+import { Route as InboxIndexRouteImport } from './routes/inbox/index'
 import { Route as InboxIdRouteRouteImport } from './routes/inbox/$id/route'
 import { Route as AccountSettingsIndexRouteImport } from './routes/account/settings/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as InboxIdInboxIndexRouteImport } from './routes/inbox/$id/$inbox/index'
-import { Route as InboxIdInboxMessageIdSourceRouteImport } from './routes/inbox/$id/$inbox/$messageId.source'
+import { Route as InboxIdInboxMessageIdSourceRouteImport } from './routes/inbox/$id/$inbox/$messageId/source'
+import { Route as InboxIdInboxMessageIdAttachmentPartRouteImport } from './routes/inbox/$id/$inbox/$messageId/attachment.$part'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InboxIndexRoute = InboxIndexRouteImport.update({
-  id: '/inbox/',
-  path: '/inbox/',
+const AuthSignInRoute = AuthSignInRouteImport.update({
+  id: '/auth/sign-in',
+  path: '/auth/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
@@ -34,9 +35,9 @@ const AuthSignUpRoute = AuthSignUpRouteImport.update({
   path: '/auth/sign-up',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthSignInRoute = AuthSignInRouteImport.update({
-  id: '/auth/sign-in',
-  path: '/auth/sign-in',
+const InboxIndexRoute = InboxIndexRouteImport.update({
+  id: '/inbox/',
+  path: '/inbox/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InboxIdRouteRoute = InboxIdRouteRouteImport.update({
@@ -65,6 +66,12 @@ const InboxIdInboxMessageIdSourceRoute =
     path: '/$inbox/$messageId/source',
     getParentRoute: () => InboxIdRouteRoute,
   } as any)
+const InboxIdInboxMessageIdAttachmentPartRoute =
+  InboxIdInboxMessageIdAttachmentPartRouteImport.update({
+    id: '/$inbox/$messageId/attachment/$part',
+    path: '/$inbox/$messageId/attachment/$part',
+    getParentRoute: () => InboxIdRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -76,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/account/settings/': typeof AccountSettingsIndexRoute
   '/inbox/$id/$inbox/': typeof InboxIdInboxIndexRoute
   '/inbox/$id/$inbox/$messageId/source': typeof InboxIdInboxMessageIdSourceRoute
+  '/inbox/$id/$inbox/$messageId/attachment/$part': typeof InboxIdInboxMessageIdAttachmentPartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -87,6 +95,7 @@ export interface FileRoutesByTo {
   '/account/settings': typeof AccountSettingsIndexRoute
   '/inbox/$id/$inbox': typeof InboxIdInboxIndexRoute
   '/inbox/$id/$inbox/$messageId/source': typeof InboxIdInboxMessageIdSourceRoute
+  '/inbox/$id/$inbox/$messageId/attachment/$part': typeof InboxIdInboxMessageIdAttachmentPartRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -99,6 +108,7 @@ export interface FileRoutesById {
   '/account/settings/': typeof AccountSettingsIndexRoute
   '/inbox/$id/$inbox/': typeof InboxIdInboxIndexRoute
   '/inbox/$id/$inbox/$messageId/source': typeof InboxIdInboxMessageIdSourceRoute
+  '/inbox/$id/$inbox/$messageId/attachment/$part': typeof InboxIdInboxMessageIdAttachmentPartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -112,6 +122,7 @@ export interface FileRouteTypes {
     | '/account/settings/'
     | '/inbox/$id/$inbox/'
     | '/inbox/$id/$inbox/$messageId/source'
+    | '/inbox/$id/$inbox/$messageId/attachment/$part'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -123,6 +134,7 @@ export interface FileRouteTypes {
     | '/account/settings'
     | '/inbox/$id/$inbox'
     | '/inbox/$id/$inbox/$messageId/source'
+    | '/inbox/$id/$inbox/$messageId/attachment/$part'
   id:
     | '__root__'
     | '/'
@@ -134,6 +146,7 @@ export interface FileRouteTypes {
     | '/account/settings/'
     | '/inbox/$id/$inbox/'
     | '/inbox/$id/$inbox/$messageId/source'
+    | '/inbox/$id/$inbox/$messageId/attachment/$part'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -155,11 +168,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/inbox/': {
-      id: '/inbox/'
-      path: '/inbox'
-      fullPath: '/inbox/'
-      preLoaderRoute: typeof InboxIndexRouteImport
+    '/auth/sign-in': {
+      id: '/auth/sign-in'
+      path: '/auth/sign-in'
+      fullPath: '/auth/sign-in'
+      preLoaderRoute: typeof AuthSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/sign-up': {
@@ -169,11 +182,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignUpRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/sign-in': {
-      id: '/auth/sign-in'
-      path: '/auth/sign-in'
-      fullPath: '/auth/sign-in'
-      preLoaderRoute: typeof AuthSignInRouteImport
+    '/inbox/': {
+      id: '/inbox/'
+      path: '/inbox'
+      fullPath: '/inbox/'
+      preLoaderRoute: typeof InboxIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inbox/$id': {
@@ -211,17 +224,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InboxIdInboxMessageIdSourceRouteImport
       parentRoute: typeof InboxIdRouteRoute
     }
+    '/inbox/$id/$inbox/$messageId/attachment/$part': {
+      id: '/inbox/$id/$inbox/$messageId/attachment/$part'
+      path: '/$inbox/$messageId/attachment/$part'
+      fullPath: '/inbox/$id/$inbox/$messageId/attachment/$part'
+      preLoaderRoute: typeof InboxIdInboxMessageIdAttachmentPartRouteImport
+      parentRoute: typeof InboxIdRouteRoute
+    }
   }
 }
 
 interface InboxIdRouteRouteChildren {
   InboxIdInboxIndexRoute: typeof InboxIdInboxIndexRoute
   InboxIdInboxMessageIdSourceRoute: typeof InboxIdInboxMessageIdSourceRoute
+  InboxIdInboxMessageIdAttachmentPartRoute: typeof InboxIdInboxMessageIdAttachmentPartRoute
 }
 
 const InboxIdRouteRouteChildren: InboxIdRouteRouteChildren = {
   InboxIdInboxIndexRoute: InboxIdInboxIndexRoute,
   InboxIdInboxMessageIdSourceRoute: InboxIdInboxMessageIdSourceRoute,
+  InboxIdInboxMessageIdAttachmentPartRoute:
+    InboxIdInboxMessageIdAttachmentPartRoute,
 }
 
 const InboxIdRouteRouteWithChildren = InboxIdRouteRoute._addFileChildren(

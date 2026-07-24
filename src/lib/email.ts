@@ -1,8 +1,9 @@
-import type { MessageEnvelopeObject } from 'imapflow';
+import type { MessageEnvelopeObject, MessageStructureObject } from 'imapflow';
 import { addHook, type ElementHook, removeHook, sanitize, type UponSanitizeAttributeHook } from 'isomorphic-dompurify';
 import type { Address, Attachment } from 'postal-mime';
 import z from 'zod';
 import { emailAccountInsertSchema, type emailAccountSelectSchema } from './database/schema';
+import type { ValueOf } from './utils';
 
 export const emailInsertSchema = emailAccountInsertSchema
 	.pick({
@@ -42,12 +43,30 @@ export const paginatedEmailMessagesSchema = z.object({
 
 export const messageFlags = z.enum({
 	Seen: '\\Seen',
+	Flagged: '\\Flagged',
 });
 export const messageFlagsSet = z.set(messageFlags);
-export type MessageFlagsSet = z.infer<typeof messageFlagsSet>;
+export type MessageFlagsValues = ValueOf<typeof messageFlags.enum>;
 
-export const setMessageFlagsSchema = getMessageSchema.safeExtend({
+export const setMessageFlagsSchema = getMessageSchema.extend({
 	flags: messageFlagsSet,
+});
+
+// https://www.ietf.org/archive/id/draft-eggert-mailflagcolors-00.html#name-definition-of-the-mailflagb
+export const messageFlagColours = z.enum({
+	Red: 'red',
+	Orange: 'orange',
+	Yellow: 'yellow',
+	Green: 'green',
+	Blue: 'blue',
+	Purple: 'purple',
+	// Grey, not gray: https://imapflow.com/docs/api/imapflow-client/#setflagcolorrange-color-options
+	Grey: 'grey',
+});
+export type MessageFlagColoursValues = ValueOf<typeof messageFlagColours.enum>;
+
+export const messageFlagColoursSchema = getMessageSchema.extend({
+	colour: messageFlagColours,
 });
 
 export function getSubject(subject: string | undefined) {
@@ -74,20 +93,44 @@ export function getAttachmentBytes(content: Attachment['content']) {
 	return typeof content === 'string' ? Uint8Array.fromBase64(content) : new Uint8Array(content);
 }
 
-// https://postal-mime.postalsys.com/docs/examples/email-viewer#react-email-viewer-component
-export function replaceInlineImages(html: string, attachments: Attachment[]) {
-	let result = html;
+export interface MessageBodyAttachment {
+	contentId?: string;
+	filename?: string;
+	inline: boolean;
+	part: string;
+	size?: number;
+	type: string;
+}
 
-	attachments
-		.filter((a) => a.related && a.contentId)
-		.forEach(({ contentId, content, mimeType }) => {
-			const cid = contentId?.replace(/^<|>$/g, '');
-			const dataUrl = `data:${mimeType};base64,${getAttachmentBytes(content).toBase64()}`;
+// https://imapflow.com/docs/examples/fetching-messages/#fetch-recent-messages-with-attachments
+// Note: ImapFlow stores Content-Type as a single string like "text/plain"
+// or "multipart/mixed" in node.type — there is no separate `subtype` field.
+export function findAttachments(node: MessageStructureObject): MessageBodyAttachment[] {
+	const attachments: MessageBodyAttachment[] = [];
+	const topType = (node.type || '').split('/').at(0);
 
-			result = result.replace(new RegExp(`cid:${cid}`, 'gi'), dataUrl);
-		});
+	const isAttachment =
+		['attachment', 'inline'].includes(node.disposition ?? '') ||
+		(node.type && topType !== 'text' && topType !== 'multipart' && !node.disposition);
 
-	return result;
+	if (isAttachment) {
+		attachments.push({
+			contentId: node.dispositionParameters?.contentId || node.id,
+			filename: node.dispositionParameters?.filename || node.parameters?.name,
+			inline: node.disposition === 'inline',
+			part: node.part || '1',
+			size: Number(node.dispositionParameters?.size) || node.size,
+			type: node.type,
+		} satisfies MessageBodyAttachment);
+	}
+
+	if (node.childNodes) {
+		for (const child of node.childNodes) {
+			attachments.push(...findAttachments(child));
+		}
+	}
+
+	return attachments;
 }
 
 export function sanitizeMessageHtml(html: string | undefined, allowRemoteSrc: boolean) {
@@ -119,21 +162,21 @@ export function sanitizeMessageHtml(html: string | undefined, allowRemoteSrc: bo
 	addHook('uponSanitizeAttribute', uponSanitizeAttribute);
 
 	// https://postal-mime.postalsys.com/docs/guides/security#5-sanitize-html-content
-	const document = sanitize(html, {
+	const iframe = sanitize(html, {
 		FORBID_ATTR: allowRemoteSrc ? [] : ['src'],
 		RETURN_DOM: true,
 		WHOLE_DOCUMENT: true,
 	}) as HTMLHtmlElement;
 
 	// I really do not like doing this security-wise but it is necessary for a better experience.
-	const script = document.ownerDocument.createElement('script');
+	const script = iframe.ownerDocument.createElement('script');
 	// https://iframe-resizer.com/setup/child/#usage
 	script.src = '/node_modules/@iframe-resizer/child/index.umd.js';
 	script.async = true;
-	document.querySelector('head')?.appendChild(script);
+	iframe.querySelector('head')?.appendChild(script);
 
 	removeHook('afterSanitizeAttributes', afterSanitizeAttributes);
 	removeHook('uponSanitizeAttribute', uponSanitizeAttribute);
 
-	return { messageHtml: document.outerHTML, sawRemoteSrc };
+	return { messageHtml: iframe.outerHTML, sawRemoteSrc };
 }
