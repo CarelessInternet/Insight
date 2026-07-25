@@ -66,7 +66,7 @@ export const messageFlagColours = z.enum({
 export type MessageFlagColoursValues = ValueOf<typeof messageFlagColours.enum>;
 
 export const messageFlagColoursSchema = getMessageSchema.extend({
-	colour: messageFlagColours,
+	colour: messageFlagColours.optional(),
 });
 
 export function getSubject(subject: string | undefined) {

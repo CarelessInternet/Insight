@@ -48,8 +48,6 @@ export const setAppearance = createClientOnlyFn((data: Appearance) =>
 	localStorage.setItem(storageKey, appearance.encode(data)),
 );
 
-export const isDarkTheme = createClientOnlyFn(() => document.documentElement.classList.contains('dark'));
-
 // Imported modules cannot be used here.
 function appearanceScriptCode(storageKey: string, defaultAppearance: Appearance, mediaKey: string) {
 	const storage = localStorage.getItem(storageKey);

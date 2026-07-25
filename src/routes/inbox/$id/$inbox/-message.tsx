@@ -66,7 +66,6 @@ import { ScrollArea, ScrollAreaContent, ScrollAreaViewport, ScrollBar } from '~/
 import { Skeleton } from '~/components/ui/skeleton';
 import { Switch } from '~/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
-import { isDarkTheme } from '~/lib/appearance';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount } from '~/lib/database/schema';
 import { getSenderInfo, type MessageFlagsValues, messageFlags, sanitizeMessageHtml } from '~/lib/email';
@@ -77,7 +76,7 @@ import { emailMiddleware } from '~/lib/middleware';
 import { cn } from '~/lib/utils';
 import MessageMenubar, { addMessageFlagsFn } from './-message.menubar';
 import { type RouteMessageSchema, routeMessageSchema } from './-route.schema';
-import { invalidateMessageAndFolders } from './-utils';
+import { invalidateMessageInboxAndFolders } from './-utils';
 
 const Route = getRouteApi('/inbox/$id/$inbox/');
 
@@ -141,7 +140,7 @@ export default function InboxMessage({ messageId }: { messageId: RouteMessageSch
 					data: { ...parameters, flags: new Set<MessageFlagsValues>([messageFlags.enum.Seen]), messageId: id },
 				})
 			) {
-				invalidateMessageAndFolders(queryClient, { ...parameters, messageId: id });
+				invalidateMessageInboxAndFolders(queryClient, { ...parameters, messageId: id });
 			}
 		}
 	});
@@ -190,7 +189,7 @@ function MessageContent({ messageId }: { messageId: RouteMessageSchema['messageI
 	useEffect(() => {
 		setAllowRemoteSrc(false);
 		setTextMode(false);
-		setToggledEmailBackground(!isDarkTheme());
+		setToggledEmailBackground(false);
 	}, [messageId, theme]);
 
 	const { messageHtml, sawRemoteSrc } = sanitizeMessageHtml(message?.source.html, allowRemoteSrc);
@@ -571,7 +570,7 @@ function MessageContent({ messageId }: { messageId: RouteMessageSchema['messageI
 								suppressHydrationWarning
 								// https://iframe-resizer.com/gpl/
 								license="GPLv3"
-								log="collapsed"
+								log={false}
 								srcDoc={parsedMessageHtml}
 								title={message.source.subject}
 								/**

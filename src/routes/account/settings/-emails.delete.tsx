@@ -4,7 +4,6 @@ import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { and, eq, inArray } from 'drizzle-orm';
 import { MailMinus, MailX, Trash } from 'lucide-react';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import z from 'zod';
 import {
 	AlertDialog,
@@ -20,6 +19,7 @@ import {
 } from '~/components/ui/alert-dialog';
 import { Button } from '~/components/ui/button';
 import { Spinner } from '~/components/ui/spinner';
+import { toast } from '~/components/ui/toast';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount, emailAccountSelectSchema } from '~/lib/database/schema';
 import { formResponse } from '~/lib/forms';
@@ -67,11 +67,10 @@ export default function DeleteEmails({ rows }: { rows: EmailAccount[] }) {
 		onSettled(data) {
 			if (data?.success) {
 				queryClient.invalidateQueries({ queryKey: invalidateEmailAccountsQueryKey(userId) });
-				toast.dismiss();
-				toast.success(data.message);
+				toast.add({ type: 'success', title: data.message });
 				setOpen(false);
 			} else {
-				toast.error(data?.message, { closeButton: true, duration: Infinity });
+				toast.add({ type: 'error', title: data?.message });
 			}
 		},
 	});

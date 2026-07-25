@@ -3,7 +3,7 @@ import { createMiddleware } from '@tanstack/react-start';
 import { useEffect } from 'react';
 import { AppearanceProvider } from '~/components/appearance-provider';
 import Header from '~/components/header';
-import { Toaster } from '~/components/ui/sonner';
+import { Toaster } from '~/components/ui/toast';
 import { TooltipProvider } from '~/components/ui/tooltip';
 import { appearanceScript } from '~/lib/appearance';
 import { setIsomorphicCookie } from '~/lib/cookie';
@@ -68,8 +68,7 @@ function RootComponent() {
 						<div className="contents min-h-full flex-1">
 							<Outlet />
 						</div>
-						{/* pointer-events-auto allows toasts to be dismissed with a dialog open (see sonner.tsx). */}
-						<Toaster richColors className="pointer-events-auto" />
+						<Toaster />
 						<Scripts />
 					</TooltipProvider>
 				</AppearanceProvider>

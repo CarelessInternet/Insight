@@ -3,10 +3,10 @@ import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { and, eq, inArray } from 'drizzle-orm';
 import { Wrench } from 'lucide-react';
-import { toast } from 'sonner';
 import z from 'zod';
 import { Button } from '~/components/ui/button';
 import { Spinner } from '~/components/ui/spinner';
+import { toast } from '~/components/ui/toast';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount, emailAccountSelectSchema } from '~/lib/database/schema';
 import Email from '~/lib/email.server';
@@ -86,10 +86,9 @@ export default function RevalidateEmails({ onRevalidated, rows }: { onRevalidate
 		onSettled(data) {
 			if (data?.success) {
 				queryClient.invalidateQueries({ queryKey: invalidateEmailAccountsQueryKey(userId) });
-				toast.dismiss();
-				toast.success(data.message);
+				toast.add({ type: 'success', title: data.message });
 			} else {
-				toast.error(data?.message, { closeButton: true, duration: Infinity });
+				toast.add({ type: 'error', title: data?.message });
 			}
 
 			onRevalidated();

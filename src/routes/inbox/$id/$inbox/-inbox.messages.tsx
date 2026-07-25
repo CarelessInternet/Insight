@@ -106,12 +106,15 @@ export default function InboxMessages() {
 											<Tooltip>
 												<TooltipTrigger
 													render={
-														<span className="inline-flex items-center gap-1">
+														<span className="inline-flex items-center gap-1.5">
 															<span>{from}</span>
 															{message.flags?.has(messageFlags.enum.Flagged) && (
 																<Flag
 																	className="size-4"
-																	style={{ fill: message.flagColor ?? 'tomato', stroke: message.flagColor ?? 'tomato' }}
+																	style={{
+																		fill: message.flagColor ?? 'var(--primary)',
+																		stroke: message.flagColor ?? 'var(--primary)',
+																	}}
 																/>
 															)}
 														</span>

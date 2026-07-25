@@ -188,7 +188,7 @@ export default class Email implements AsyncDisposable {
 		const { colour, inbox, messageId } = messageFlagColoursSchema.parse(parameters);
 		using _ = await this.getMailbox(inbox);
 
-		return await this.client.setFlagColor(messageId, colour, { uid: true });
+		return await this.client.setFlagColor(messageId, colour ?? '', { uid: true });
 	}
 
 	public async [Symbol.asyncDispose]() {

@@ -14,7 +14,6 @@ import {
 	ReplyAll,
 	Tag,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { z } from 'zod';
 import {
 	Menubar,
@@ -28,12 +27,14 @@ import {
 	MenubarSubTrigger,
 	MenubarTrigger,
 } from '~/components/ui/menubar';
+import { toast } from '~/components/ui/toast';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount } from '~/lib/database/schema';
 import {
 	type MessageFlagColoursValues,
 	type MessageFlagsValues,
 	messageFlagColours,
+	messageFlagColoursSchema,
 	messageFlags,
 	setMessageFlagsSchema,
 } from '~/lib/email';
@@ -42,13 +43,13 @@ import logger from '~/lib/logger.server';
 import { emailMiddleware } from '~/lib/middleware';
 import { inboxMessageOptions } from './-message';
 import type { RouteMessageSchema } from './-route.schema';
-import { invalidateMessageAndFolders } from './-utils';
+import { invalidateMessageAndInbox, invalidateMessageInboxAndFolders } from './-utils';
 
 const Route = getRouteApi('/inbox/$id/$inbox/');
 
 export const addMessageFlagsFn = createServerFn({ method: 'POST' })
 	.middleware([emailMiddleware])
-	.validator(setMessageFlagsSchema.extend({ colour: z.optional(messageFlagColours) }))
+	.validator(z.object({ ...setMessageFlagsSchema.shape, ...messageFlagColoursSchema.shape }))
 	.handler(async ({ context: { email, user }, data: { colour, ...parameters } }) => {
 		await using imapEmail = new Email({
 			email: email.email,
@@ -66,14 +67,10 @@ export const addMessageFlagsFn = createServerFn({ method: 'POST' })
 		}
 
 		try {
-			let colourSuccess = true;
+			const colourSuccess = await imapEmail.setMessageFlagColour({ ...parameters, colour });
 
-			if (colour) {
-				colourSuccess = await imapEmail.setMessageFlagColour({ ...parameters, colour });
-
-				if (colourSuccess) {
-					logger.debug('Set the flag colour for an inbox email message by user:%s', user.id);
-				}
+			if (colourSuccess) {
+				logger.debug('Set the flag colour for an inbox email message by user:%s', user.id);
 			}
 
 			const flagSuccess = await imapEmail.addMessageFlags(parameters);
@@ -146,10 +143,10 @@ export default function MessageMenubar({ messageId }: { messageId: RouteMessageS
 		},
 		onSettled(success, _, seen) {
 			if (success) {
-				invalidateMessageAndFolders(queryClient, { ...parameters, messageId });
-				toast.success(`Email message was marked as ${seen ? 'read' : 'unread'}!`);
+				invalidateMessageInboxAndFolders(queryClient, { ...parameters, messageId });
+				toast.add({ type: 'success', title: `Email message was marked as ${seen ? 'read' : 'unread'}!` });
 			} else {
-				toast.error(`Failed to mark the email message as ${seen ? 'read' : 'unread'}.`);
+				toast.add({ type: 'error', title: `Failed to mark the email message as ${seen ? 'read' : 'unread'}.` });
 			}
 		},
 	});
@@ -166,10 +163,13 @@ export default function MessageMenubar({ messageId }: { messageId: RouteMessageS
 		},
 		onSettled(success, _, { flagged }) {
 			if (success) {
-				invalidateMessageAndFolders(queryClient, { ...parameters, messageId });
-				toast.success(`Email message was marked as ${flagged ? 'flagged' : 'unflagged'}!`);
+				invalidateMessageAndInbox(queryClient, { ...parameters, messageId });
+				toast.add({ type: 'success', title: `Email message was marked as ${flagged ? 'flagged' : 'unflagged'}!` });
 			} else {
-				toast.error(`Failed to mark the email message as ${flagged ? 'flaggedf' : 'unflagged'}.`);
+				toast.add({
+					type: 'error',
+					title: `Failed to mark the email message as ${flagged ? 'flaggedf' : 'unflagged'}.`,
+				});
 			}
 		},
 	});

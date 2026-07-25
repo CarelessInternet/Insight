@@ -7,7 +7,6 @@ import { and, eq } from 'drizzle-orm';
 import { createSelectSchema } from 'drizzle-zod';
 import { CircleX, Eraser, PencilLine } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import z from 'zod';
 import type DropdownDialog from '~/components/DropdownDialog';
 import { Button } from '~/components/ui/button';
@@ -22,8 +21,8 @@ import {
 } from '~/components/ui/dialog';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
-import { hasToastPresent } from '~/components/ui/sonner';
 import { Spinner } from '~/components/ui/spinner';
+import { toast } from '~/components/ui/toast';
 import { decrypt, encrypt, hash } from '~/lib/crypto.server';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount } from '~/lib/database/schema';
@@ -143,12 +142,10 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 			if (isFormResponse(response)) {
 				if (response.success) {
 					queryClient.invalidateQueries({ queryKey: invalidateEmailAccountsQueryKey(userId) });
-					toast.dismiss();
-					toast.success(response.message);
-					setOpen(false);
+					toast.add({ type: 'success', title: response.message });
 					formApi.reset();
 				} else {
-					toast.error(response.message, { closeButton: true, duration: Infinity });
+					toast.add({ type: 'error', title: response.message });
 				}
 			}
 		},
@@ -168,16 +165,7 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 	);
 
 	return (
-		<Dialog
-			open={open}
-			onOpenChange={(open, details) => {
-				if (!open && details.reason === 'outside-press' && hasToastPresent(details.trigger)) {
-					return details.event.preventDefault();
-				}
-
-				setOpen(open);
-			}}
-		>
+		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent initialFocus={false} className="sm:max-w-lg">
 				<form
 					ref={ref}
@@ -294,12 +282,14 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 						</form.Field>
 					</FieldGroup>
 					<DialogFooter>
-						<DialogClose>
-							<Button variant="outline">
-								<CircleX data-icon="inline-start" />
-								Cancel
-							</Button>
-						</DialogClose>
+						<DialogClose
+							render={
+								<Button variant="outline">
+									<CircleX data-icon="inline-start" />
+									Cancel
+								</Button>
+							}
+						/>
 						<Button type="reset" variant="destructive" onClick={() => form.reset()}>
 							<Eraser data-icon="inline-start" />
 							Reset

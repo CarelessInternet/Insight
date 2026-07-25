@@ -3,7 +3,6 @@ import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { and, eq } from 'drizzle-orm';
 import { Trash, Trash2Icon } from 'lucide-react';
-import { toast } from 'sonner';
 import type DropdownDialog from '~/components/DropdownDialog';
 import {
 	AlertDialog,
@@ -17,6 +16,7 @@ import {
 	AlertDialogTitle,
 } from '~/components/ui/alert-dialog';
 import { Spinner } from '~/components/ui/spinner';
+import { toast } from '~/components/ui/toast';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount, emailAccountSelectSchema } from '~/lib/database/schema';
 import { formResponse } from '~/lib/forms';
@@ -66,11 +66,10 @@ function Component({ open, row, setOpen }: DropdownDialog<EmailAccount>) {
 		onSettled(data) {
 			if (data?.success) {
 				queryClient.invalidateQueries({ queryKey: invalidateEmailAccountsQueryKey(userId) });
-				toast.dismiss();
-				toast.success(data.message);
+				toast.add({ type: 'success', title: data.message });
 				setOpen(false);
 			} else {
-				toast.error(data?.message, { closeButton: true, duration: Infinity });
+				toast.add({ type: 'error', title: data?.message });
 			}
 		},
 	});

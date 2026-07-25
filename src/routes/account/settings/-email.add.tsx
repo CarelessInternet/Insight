@@ -11,7 +11,6 @@ import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { CircleX, Eraser, MailPlus } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { toast } from 'sonner';
 import z from 'zod';
 import { Button } from '~/components/ui/button';
 import {
@@ -26,8 +25,8 @@ import {
 } from '~/components/ui/dialog';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
-import { hasToastPresent } from '~/components/ui/sonner';
 import { Spinner } from '~/components/ui/spinner';
+import { toast } from '~/components/ui/toast';
 import { encrypt, hash } from '~/lib/crypto.server';
 import { database } from '~/lib/database/drizzle.server';
 import { emailAccount } from '~/lib/database/schema';
@@ -114,7 +113,6 @@ export default function AddEmailAccount() {
 	const queryClient = useQueryClient();
 	// biome-ignore lint/style/noNonNullAssertion: useRef.
 	const ref = useRef<HTMLFormElement>(null!);
-	const [dialogOpen, setDialogOpen] = useState(false);
 	const [state, setState] = useState<FormDataServer>(initialFormState);
 	const form = useForm({
 		...accountOptions,
@@ -133,28 +131,17 @@ export default function AddEmailAccount() {
 			if (isFormResponse(response)) {
 				if (response.success) {
 					queryClient.invalidateQueries({ queryKey: invalidateEmailAccountsQueryKey(userId) });
-					toast.dismiss();
-					toast.success(response.message);
-					setDialogOpen(false);
+					toast.add({ type: 'success', title: response.message });
 					formApi.reset();
 				} else {
-					toast.error(response.message, { closeButton: true, duration: Infinity });
+					toast.add({ type: 'error', title: response.message });
 				}
 			}
 		},
 	});
 
 	return (
-		<Dialog
-			open={dialogOpen}
-			onOpenChange={(open, details) => {
-				if (!open && details.reason === 'outside-press' && hasToastPresent(details.trigger)) {
-					return details.event.preventDefault();
-				}
-
-				setDialogOpen(open);
-			}}
-		>
+		<Dialog>
 			<DialogTrigger
 				render={
 					<Button>
