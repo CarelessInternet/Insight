@@ -51,6 +51,17 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		await this.opts.store.send('FLUSHALL', []);
 	}
 
+	// https://better-auth.com/docs/beta/concepts/database#redis-storage
+	async increment(key: string, ttl: number): Promise<number> {
+		const value = await this.opts.store.incr(key);
+
+		if (value === 1) {
+			await this.opts.store.expire(key, ttl);
+		}
+
+		return value;
+	}
+
 	async disconnect(): Promise<void> {
 		this.opts.store.close();
 	}

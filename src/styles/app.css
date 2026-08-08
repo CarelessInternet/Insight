@@ -7,8 +7,7 @@
 
 /* Would use nesting but it is way slower... */
 /* https://ui.shadcn.com/create?base=base&preset=acipGQC */
-:root,
-:root[data-palette="default"] {
+[data-palette="default"] {
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.145 0.008 326);
 	--card: oklch(1 0 0);
@@ -43,8 +42,7 @@
 	--sidebar-ring: oklch(0.711 0.019 323.02);
 }
 
-:root.dark,
-:root[data-palette="default"].dark {
+[data-palette="default"].dark {
 	--background: oklch(0.145 0.008 326);
 	--foreground: oklch(0.985 0 0);
 	--card: oklch(0.212 0.019 322.12);
@@ -79,7 +77,7 @@
 }
 
 /* https://ui.shadcn.com/create?base=base&preset=b2oqnayH2 */
-:root[data-palette="green"] {
+[data-palette="green"] {
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.148 0.004 228.8);
 	--card: oklch(1 0 0);
@@ -114,7 +112,7 @@
 	--sidebar-ring: oklch(0.723 0.014 214.4);
 }
 
-:root[data-palette="green"].dark {
+[data-palette="green"].dark {
 	--background: oklch(0.148 0.004 228.8);
 	--foreground: oklch(0.987 0.002 197.1);
 	--card: oklch(0.218 0.008 223.9);
@@ -149,7 +147,7 @@
 }
 
 /* https://ui.shadcn.com/create?base=base&preset=b50MHrfDE */
-:root[data-palette="rose"] {
+[data-palette="rose"] {
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.147 0.004 49.3);
 	--card: oklch(1 0 0);
@@ -184,7 +182,7 @@
 	--sidebar-ring: oklch(0.714 0.014 41.2);
 }
 
-:root[data-palette="rose"].dark {
+[data-palette="rose"].dark {
 	--background: oklch(0.147 0.004 49.3);
 	--foreground: oklch(0.986 0.002 67.8);
 	--card: oklch(0.214 0.009 43.1);
@@ -219,7 +217,7 @@
 }
 
 /* https://ui.shadcn.com/create?base=base&preset=b5JiAHfpg */
-:root[data-palette="sky"] {
+[data-palette="sky"] {
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.148 0.004 228.8);
 	--card: oklch(1 0 0);
@@ -255,7 +253,7 @@
 }
 
 /* Slightly adjusted primary values. */
-:root[data-palette="sky"].dark {
+[data-palette="sky"].dark {
 	--background: oklch(0.148 0.004 228.8);
 	--foreground: oklch(0.987 0.002 197.1);
 	--card: oklch(0.218 0.008 223.9);
@@ -290,7 +288,7 @@
 }
 
 /* https://ui.shadcn.com/create?base=base&preset=b3ktqWLU8 */
-:root[data-palette="orange"] {
+[data-palette="orange"] {
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.147 0.004 49.25);
 	--card: oklch(1 0 0);
@@ -325,7 +323,7 @@
 	--sidebar-ring: oklch(0.709 0.01 56.259);
 }
 
-:root[data-palette="orange"].dark {
+[data-palette="orange"].dark {
 	--background: oklch(0.147 0.004 49.25);
 	--foreground: oklch(0.985 0.001 106.423);
 	--card: oklch(0.216 0.006 56.043);

@@ -3,7 +3,7 @@ import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq } from 'drizzle-orm';
 import type { ListTreeResponse } from 'imapflow';
-import { Archive, ArchiveX, ChevronRight, Folder, Inbox, Mail, Send, SquarePen, Trash } from 'lucide-react';
+import { ChevronRight, Folder } from 'lucide-react';
 import { Badge } from '~/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/components/ui/collapsible';
 import {
@@ -22,6 +22,7 @@ import type { EmailId } from '~/lib/email';
 import Email from '~/lib/email.server';
 import logger from '~/lib/logger.server';
 import { emailMiddleware } from '~/lib/middleware';
+import { FolderIcon } from './-utils';
 
 const Route = getRouteApi('/inbox/$id/$inbox/');
 
@@ -144,23 +145,4 @@ function FolderTree({ folder }: { folder: ListTreeResponse }) {
 			/>
 		</SidebarMenuItem>
 	);
-}
-
-function FolderIcon({ specialUse }: Pick<ListTreeResponse, 'specialUse'>) {
-	switch (specialUse) {
-		case '\\Inbox':
-			return <Inbox />;
-		case '\\Sent':
-			return <Send />;
-		case '\\Drafts':
-			return <SquarePen />;
-		case '\\Junk':
-			return <ArchiveX />;
-		case '\\Trash':
-			return <Trash />;
-		case '\\Archive':
-			return <Archive />;
-		default:
-			return <Mail />;
-	}
 }

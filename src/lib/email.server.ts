@@ -10,6 +10,7 @@ import {
 	getMessageSchema,
 	getSubject,
 	messageFlagColoursSchema,
+	moveMessageSchema,
 	paginatedEmailMessagesSchema,
 	type searchMessageFilters,
 	setMessageFlagsSchema,
@@ -189,6 +190,13 @@ export default class Email implements AsyncDisposable {
 		using _ = await this.getMailbox(inbox);
 
 		return await this.client.setFlagColor(messageId, colour ?? '', { uid: true });
+	}
+
+	public async moveMessage(parameters: z.infer<typeof moveMessageSchema>) {
+		const { inbox, messageId, path } = moveMessageSchema.parse(parameters);
+		using _ = await this.getMailbox(inbox);
+
+		return await this.client.messageMove(messageId, path, { uid: true });
 	}
 
 	public async [Symbol.asyncDispose]() {

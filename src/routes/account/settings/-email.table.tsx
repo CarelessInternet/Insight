@@ -2,18 +2,27 @@ import { type QueryKey, queryOptions, useSuspenseQuery } from '@tanstack/react-q
 import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import {
-	type ColumnDef,
 	type ColumnFiltersState,
+	type ColumnVisibilityState,
+	columnFilteringFeature,
+	columnVisibilityFeature,
+	createColumnHelper,
+	createFilteredRowModel,
+	createPaginatedRowModel,
+	createSortedRowModel,
+	filterFn_includesString,
 	flexRender,
-	getCoreRowModel,
-	getFilteredRowModel,
-	getSortedRowModel,
+	metaHelper,
 	type PaginationState,
-	type RowData,
 	type RowSelectionState,
+	rowPaginationFeature,
+	rowSelectionFeature,
+	rowSortingFeature,
 	type SortingState,
-	useReactTable,
-	type VisibilityState,
+	sortFn_alphanumeric,
+	sortFn_text,
+	tableFeatures,
+	useTable,
 } from '@tanstack/react-table';
 import { eq } from 'drizzle-orm';
 import {
@@ -121,14 +130,25 @@ export const emailAccountsOptions = (parameters: EmailAccountsOptions) =>
 
 type RowAction = 'edit' | 'delete' | null;
 
-declare module '@tanstack/table-core' {
-	interface TableMeta<TData extends RowData> {
-		openAction: (action: RowAction, row: TData) => void;
-	}
-}
+const features = tableFeatures({
+	columnFilteringFeature,
+	columnVisibilityFeature,
+	filterFns: { includesString: filterFn_includesString },
+	filteredRowModel: createFilteredRowModel(),
+	paginatedRowModel: createPaginatedRowModel(),
+	rowPaginationFeature,
+	rowSelectionFeature,
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+	sortFns: { alphanumeric: sortFn_alphanumeric, text: sortFn_text },
+	tableMeta: metaHelper<{ openAction: (action: RowAction, row: EmailAccount) => void }>(),
+});
 
-const columns = [
-	{
+export type TableFeatures = typeof features;
+
+const columnHelper = createColumnHelper<TableFeatures, EmailAccount>();
+const columns = columnHelper.columns([
+	columnHelper.display({
 		id: 'select',
 		header: ({ table }) => (
 			<Checkbox
@@ -146,14 +166,9 @@ const columns = [
 		),
 		enableHiding: false,
 		enableSorting: false,
-	},
-	{
-		accessorKey: 'id',
-		header: ({ column }) => column.id,
-		id: 'ID',
-	},
-	{
-		accessorKey: 'label',
+	}),
+	columnHelper.accessor('id', { header: ({ column }) => column.id, id: 'ID' }),
+	columnHelper.accessor('label', {
 		header: ({ column }) => (
 			<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
 				Label
@@ -161,28 +176,24 @@ const columns = [
 			</Button>
 		),
 		id: 'Label',
-	},
-	{
-		accessorKey: 'email',
+	}),
+	columnHelper.accessor('email', {
 		header: ({ column }) => (
 			<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
 				Email
 				<ArrowUpDown className="ml-2 h-4 w-4" />
 			</Button>
 		),
-	},
-
-	{
-		accessorKey: 'hostname',
+	}),
+	columnHelper.accessor('hostname', {
 		header: ({ column }) => (
 			<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
 				Hostname
 				<ArrowUpDown className="ml-2 h-4 w-4" />
 			</Button>
 		),
-	},
-	{
-		accessorKey: 'status',
+	}),
+	columnHelper.accessor('status', {
 		cell: ({ getValue }) => {
 			const status = getValue() as typeof emailAccount.$inferSelect.status;
 
@@ -204,21 +215,18 @@ const columns = [
 				<ArrowUpDown className="ml-2 h-4 w-4" />
 			</Button>
 		),
-	},
-	{
-		accessorKey: 'createdAt',
-		accessorFn: (row) => extractTimestampFromUUIDv7(row.id),
-		cell: ({ cell }) => dateAndTime(cell.getValue<ReturnType<typeof extractTimestampFromUUIDv7>>()),
+	}),
+	columnHelper.display({
+		id: 'Date Added',
+		cell: ({ cell }) => dateAndTime(extractTimestampFromUUIDv7(cell.row.original.id)),
 		header: ({ column }) => (
 			<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
 				{column.id}
 				<ArrowUpDown className="ml-2 h-4 w-4" />
 			</Button>
 		),
-		id: 'Date Added',
-	},
-	{
-		accessorKey: 'updatedAt',
+	}),
+	columnHelper.accessor('updatedAt', {
 		cell: ({ cell }) => dateAndTime(cell.getValue<ReturnType<typeof extractTimestampFromUUIDv7>>()),
 		header: ({ column }) => (
 			<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
@@ -227,8 +235,8 @@ const columns = [
 			</Button>
 		),
 		id: 'Last Updated',
-	},
-	{
+	}),
+	columnHelper.display({
 		id: 'actions',
 		cell: ({ row, table }) => (
 			<DropdownMenu>
@@ -275,8 +283,8 @@ const columns = [
 		),
 		enableHiding: false,
 		enableSorting: false,
-	},
-] satisfies ColumnDef<EmailAccount>[];
+	}),
+]);
 
 export default function EmailAccountsTable() {
 	const { userId } = Route.useLoaderData();
@@ -288,7 +296,7 @@ export default function EmailAccountsTable() {
 
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+	const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>({
 		ID: false,
 		Label: data.some((email) => !email.label),
 		'Date Added': false,
@@ -298,16 +306,14 @@ export default function EmailAccountsTable() {
 	const [activeAction, setActiveAction] = useState<RowAction>(null);
 	const [activeRow, setActiveRow] = useState<EmailAccount | null>(null);
 
-	const table = useReactTable({
+	const table = useTable({
 		data,
 		columns,
-		getCoreRowModel: getCoreRowModel(),
-		onPaginationChange: (newPagination) => transitionData(() => setPagination(newPagination)),
-		manualPagination: true,
+		features,
 		rowCount,
-		getSortedRowModel: getSortedRowModel(),
+		manualPagination: true,
+		onPaginationChange: (newPagination) => transitionData(() => setPagination(newPagination)),
 		onSortingChange: setSorting,
-		getFilteredRowModel: getFilteredRowModel(),
 		onColumnFiltersChange: setColumnFilters,
 		onColumnVisibilityChange: setColumnVisibility,
 		onRowSelectionChange: setRowSelection,
@@ -377,11 +383,11 @@ export default function EmailAccountsTable() {
 					<Field orientation="horizontal" className="w-fit">
 						<FieldLabel htmlFor="select-rows-per-page">Rows per page</FieldLabel>
 						<Select
-							value={String(table.getState().pagination.pageSize)}
+							value={String(table.state.pagination.pageSize)}
 							onValueChange={(value) => table.setPageSize(Number(value))}
 						>
 							<SelectTrigger className="w-20" id="select-rows-per-page">
-								<SelectValue placeholder={table.getState().pagination.pageSize} />
+								<SelectValue placeholder={table.state.pagination.pageSize} />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectGroup>
@@ -399,8 +405,7 @@ export default function EmailAccountsTable() {
 							<ChevronLeft />
 						</Button>
 						<Button variant="outline" className="opacity-100!" disabled>
-							Page {table.getState().pagination.pageIndex + (table.getPageCount() === 0 ? 0 : 1)} of{' '}
-							{table.getPageCount()}
+							Page {table.state.pagination.pageIndex + (table.getPageCount() === 0 ? 0 : 1)} of {table.getPageCount()}
 						</Button>
 						<Button variant="outline" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
 							<ChevronRight />

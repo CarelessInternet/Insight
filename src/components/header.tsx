@@ -50,6 +50,33 @@ const Route = getRouteApi('__root__');
 
 function AppearanceDropdown() {
 	const { palette, setPalette, setTheme, theme } = useAppearance();
+	const palettes = [
+		{
+			id: 'default',
+			icon: House,
+			name: 'Default',
+		},
+		{
+			id: 'rose',
+			icon: Rose,
+			name: 'Rose',
+		},
+		{
+			id: 'orange',
+			icon: Citrus,
+			name: 'Orange',
+		},
+		{
+			id: 'green',
+			icon: Leaf,
+			name: 'Green',
+		},
+		{
+			id: 'sky',
+			icon: CloudSun,
+			name: 'Sky',
+		},
+	] satisfies { id: Palette; name: string; icon: typeof House }[];
 
 	return (
 		<DropdownMenuSub>
@@ -90,26 +117,12 @@ function AppearanceDropdown() {
 						<DropdownMenuPortal>
 							<DropdownMenuSubContent>
 								<DropdownMenuRadioGroup value={palette} onValueChange={(value) => setPalette(value as Palette)}>
-									<DropdownMenuRadioItem value={'default' satisfies Palette}>
-										<House />
-										Default
-									</DropdownMenuRadioItem>
-									<DropdownMenuRadioItem value={'rose' satisfies Palette}>
-										<Rose />
-										Rose
-									</DropdownMenuRadioItem>
-									<DropdownMenuRadioItem value={'orange' satisfies Palette}>
-										<Citrus />
-										Orange
-									</DropdownMenuRadioItem>
-									<DropdownMenuRadioItem value={'green' satisfies Palette}>
-										<Leaf />
-										Green
-									</DropdownMenuRadioItem>
-									<DropdownMenuRadioItem value={'sky' satisfies Palette}>
-										<CloudSun />
-										Sky
-									</DropdownMenuRadioItem>
+									{palettes.map(({ icon: Icon, id, name }) => (
+										<DropdownMenuRadioItem key={id} value={id}>
+											<Icon data-palette={id} className="stroke-primary" />
+											{name}
+										</DropdownMenuRadioItem>
+									))}
 								</DropdownMenuRadioGroup>
 							</DropdownMenuSubContent>
 						</DropdownMenuPortal>

@@ -69,6 +69,8 @@ export const messageFlagColoursSchema = getMessageSchema.extend({
 	colour: messageFlagColours.optional(),
 });
 
+export const moveMessageSchema = getMessageSchema.extend({ path: z.string() });
+
 export function getSubject(subject: string | undefined) {
 	return subject || '(no subject)';
 }

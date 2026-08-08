@@ -24,6 +24,7 @@ const auth = betterAuth({
 	plugins: [
 		passkey({
 			authenticatorSelection: { residentKey: 'required', userVerification: 'required' },
+			// TODO: delete the user if the WebAuthn ceremony fails.
 			registration: {
 				afterVerification: async ({ verification }) => ({
 					name: getAuthenticatorName(verification.registrationInfo?.aaguid),
@@ -68,13 +69,8 @@ const auth = betterAuth({
 		tanstackStartCookies(),
 	],
 	secondaryStorage: {
-		get: async (key) => await cache.get<string>(key),
-		/**
-		 * @param ttl This is in seconds.
-		 */
-		// Keyv stores the TTL in milliseconds while Better-Auth uses seconds, hence the conversion.
-		set: async (key, value, ttl) => await cache.set(key, value, typeof ttl === 'number' ? ttl * 1000 : undefined),
 		delete: async (key) => void cache.delete(key),
+		get: async (key) => await cache.get<string>(key),
 		getAndDelete: async (key) => {
 			// For some reason, (Bun) Redis' getdel method does not work.
 			const value = await cache.get<string>(key);
@@ -82,6 +78,24 @@ const auth = betterAuth({
 
 			return value;
 		},
+		increment: async (key, ttl) => {
+			if (cache.store instanceof KeyvRedis) {
+				return await cache.store.increment(key, ttl);
+			} else {
+				const value = Number(await cache.get(key));
+
+				if (value === 1) {
+					await cache.set(key, value, ttl * 1000);
+				}
+
+				return value;
+			}
+		},
+		/**
+		 * @param ttl This is in seconds.
+		 */
+		// Keyv stores the TTL in milliseconds while Better-Auth uses seconds, hence the conversion.
+		set: async (key, value, ttl) => await cache.set(key, value, typeof ttl === 'number' ? ttl * 1000 : undefined),
 	},
 	secret: environment.APPLICATION_SECRET,
 	rateLimit: { enabled: true, storage: 'secondary-storage' },

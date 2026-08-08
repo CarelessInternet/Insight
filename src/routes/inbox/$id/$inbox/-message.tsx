@@ -578,6 +578,7 @@ function MessageContent({ messageId }: { messageId: RouteMessageSchema['messageI
 								 * allow-popups-to-escape-sandbox: makes CORS work which is needed by some websites.
 								 * allow-same-origin: makes network requests with cookies (e.g. GET) work. Needed for attachments.
 								 * allow-scripts: @iframe/resizer.
+								 * TODO: use temporary IDs (like passkeys on registration) for attachments so allow-same-origin can be removed.
 								 */
 								sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
 								referrerPolicy="no-referrer"

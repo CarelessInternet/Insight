@@ -63,7 +63,7 @@ function RouteComponent() {
 		<div className="flex flex-1 items-center justify-center p-6 md:p-10">
 			<Card className="w-full max-w-lg">
 				<CardHeader className="text-center">
-					<CardTitle>Choose an Inbox</CardTitle>
+					<CardTitle>Open an Inbox</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<Combobox

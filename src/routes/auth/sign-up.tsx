@@ -67,13 +67,14 @@ function RouteComponent() {
 				const context = await passkeySignUp({ data: { email, username } });
 				const { error } = await authClient.passkey.addPasskey({
 					context,
+					createSession: true,
 					name: passkeyName,
 				});
 
 				if (error) {
 					setError(error?.message ?? error.statusText);
 				} else {
-					navigate({ to: '/auth/sign-in' });
+					navigate({ to: '/inbox' });
 				}
 			} catch (err) {
 				setError(Error.isError(err) ? err.message : 'An error occurred while creating the account/passkey.');

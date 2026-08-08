@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { and, eq } from 'drizzle-orm';
+import type { ListTreeResponse } from 'imapflow';
 import {
 	Flag,
 	FlagOff,
+	Folder,
 	FolderTree,
 	Forward,
 	Mail,
@@ -36,14 +38,16 @@ import {
 	messageFlagColours,
 	messageFlagColoursSchema,
 	messageFlags,
+	moveMessageSchema,
 	setMessageFlagsSchema,
 } from '~/lib/email';
 import Email from '~/lib/email.server';
 import logger from '~/lib/logger.server';
 import { emailMiddleware } from '~/lib/middleware';
 import { inboxMessageOptions } from './-message';
-import type { RouteMessageSchema } from './-route.schema';
-import { invalidateMessageAndInbox, invalidateMessageInboxAndFolders } from './-utils';
+import type { inboxPath, RouteMessageSchema } from './-route.schema';
+import { foldersOptions } from './-sidebar.folders';
+import { FolderIcon, invalidateMessageAndInbox, invalidateMessageInboxAndFolders } from './-utils';
 
 const Route = getRouteApi('/inbox/$id/$inbox/');
 
@@ -127,13 +131,51 @@ const removeMessageFlagsFn = createServerFn({ method: 'POST' })
 		}
 	});
 
+const moveMessageFn = createServerFn({ method: 'POST' })
+	.middleware([emailMiddleware])
+	.validator(moveMessageSchema)
+	.handler(async ({ context: { email, user }, data }) => {
+		await using imapEmail = new Email({
+			email: email.email,
+			hostname: email.hostname,
+			password: email.password,
+		});
+		await imapEmail.connect();
+
+		if (!imapEmail.authenticated) {
+			await database
+				.update(emailAccount)
+				.set({ status: 'invalid' })
+				.where(and(eq(emailAccount.userId, user.id), eq(emailAccount.id, email.id)));
+			throw Route.redirect({ to: '/account/settings' });
+		}
+
+		try {
+			const success = await imapEmail.moveMessage(data);
+
+			if (success) {
+				logger.debug('Moved an inbox email message by user:%s', user.id);
+			}
+
+			return success;
+		} catch (err) {
+			if (Error.isError(err) && 'mailboxMissing' in err && err.mailboxMissing) {
+				throw Route.redirect({ to: '/inbox/$id/$inbox', params: { id: email.id, inbox: 'INBOX' } });
+			}
+
+			logger.warn('Moving an inbox email message failed: %s', err);
+			return false;
+		}
+	});
+
 export default function MessageMenubar({ messageId }: { messageId: RouteMessageSchema['messageId'] }) {
 	const parameters = Route.useParams();
-	const { data: message } = useQuery(inboxMessageOptions({ ...parameters, messageId }));
 	const queryClient = useQueryClient();
+	const { data: message } = useQuery(inboxMessageOptions({ ...parameters, messageId }));
 
 	const addMessageFlags = useServerFn(addMessageFlagsFn);
 	const removeMessageFlags = useServerFn(removeMessageFlagsFn);
+	const moveMessage = useServerFn(moveMessageFn);
 
 	const { isPending: markMessageReadPending, mutate: markMessageRead } = useMutation({
 		mutationFn: (seen: boolean) => {
@@ -173,6 +215,25 @@ export default function MessageMenubar({ messageId }: { messageId: RouteMessageS
 			}
 		},
 	});
+	const { isPending: moveMessagePending, mutate: moveMessageMutation } = useMutation({
+		mutationFn: (path: ListTreeResponse['path']) => {
+			if (!path) {
+				throw new TypeError('No path for the email found.');
+			}
+
+			return moveMessage({ data: { ...parameters, messageId, path } });
+		},
+		onSettled(response) {
+			if (response) {
+				invalidateMessageInboxAndFolders(queryClient, { ...parameters, messageId });
+				toast.add({ type: 'success', title: `Email message was moved!` });
+			} else {
+				toast.add({ type: 'error', title: `Failed to move the email message.` });
+			}
+		},
+	});
+
+	const { data: folders } = useQuery(foldersOptions(parameters.id));
 
 	return (
 		<Menubar className="rounded-none border-0 border-b bg-accent/40 px-2">
@@ -241,16 +302,68 @@ export default function MessageMenubar({ messageId }: { messageId: RouteMessageS
 					</MenubarGroup>
 				</MenubarContent>
 			</MenubarMenu>
-			<MenubarMenu disabled>
+			<MenubarMenu disabled={!folders || moveMessagePending}>
 				<MenubarTrigger className="gap-1.5">
 					<FolderTree className="size-4" /> Move
 				</MenubarTrigger>
 				<MenubarContent>
 					<MenubarGroup>
-						<MenubarItem>Temp</MenubarItem>
+						{folders?.folders?.map((folder) => (
+							<MenubarFolderTree
+								key={folder.path}
+								folder={folder}
+								inbox={parameters.inbox}
+								onClick={moveMessageMutation}
+							/>
+						))}
 					</MenubarGroup>
 				</MenubarContent>
 			</MenubarMenu>
 		</Menubar>
+	);
+}
+
+function MenubarFolderTree({
+	folder,
+	inbox,
+	onClick,
+}: {
+	folder: ListTreeResponse;
+	inbox: z.infer<typeof inboxPath>;
+	onClick: (path: ListTreeResponse['path']) => void;
+}) {
+	if ('folders' in folder) {
+		return (
+			<MenubarSub>
+				<MenubarSubTrigger onClick={(e) => e.target} openOnHover>
+					{/** biome-ignore lint/a11y/useKeyWithClickEvents: Don't care. */}
+					<p
+						onClick={() => {
+							if (folder.path !== inbox) {
+								void onClick(folder.path);
+							}
+						}}
+						className="contents"
+					>
+						{folder.specialUse === '\\Inbox' ? FolderIcon({ specialUse: folder.specialUse }) : <Folder />}
+						{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
+					</p>
+				</MenubarSubTrigger>
+				<MenubarSubContent>
+					<MenubarGroup>
+						{folder.folders?.map((subFolder) => (
+							<MenubarFolderTree key={subFolder.path} folder={subFolder} inbox={inbox} onClick={onClick} />
+						))}
+					</MenubarGroup>
+				</MenubarSubContent>
+			</MenubarSub>
+		);
+	}
+
+	return (
+		<MenubarItem key={folder.path} onClick={() => void onClick(folder.path)} disabled={folder.path === inbox}>
+			<FolderIcon specialUse={folder.specialUse} />
+			{folder.specialUse === '\\Inbox' ? 'Inbox' : folder.name}
+		</MenubarItem>
 	);
 }

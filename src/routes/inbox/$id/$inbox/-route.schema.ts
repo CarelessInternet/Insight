@@ -2,18 +2,18 @@ import z from 'zod';
 import { messageId, paginatedEmailMessagesSchema } from '~/lib/email';
 import { emailMiddlewareSchema } from '~/lib/middleware';
 
-export const routeSchema = emailMiddlewareSchema.extend({
-	// https://github.com/colinhacks/zod/discussions/4934#discussioncomment-13858053
-	inbox: z.union([
-		z.literal('INBOX'),
-		z.literal('Sent'),
-		z.literal('Drafts'),
-		z.literal('Junk'),
-		z.literal('Trash'),
-		z.literal('Archive'),
-		z.string() as z.ZodType<string & {}>,
-	]),
-});
+// https://github.com/colinhacks/zod/discussions/4934#discussioncomment-13858053
+export const inboxPath = z.union([
+	z.literal('INBOX'),
+	z.literal('Sent'),
+	z.literal('Drafts'),
+	z.literal('Junk'),
+	z.literal('Trash'),
+	z.literal('Archive'),
+	z.string() as z.ZodType<string & {}>,
+]);
+
+export const routeSchema = emailMiddlewareSchema.extend({ inbox: inboxPath });
 
 export const routeMessageSchema = z.object({ ...routeSchema.shape, messageId });
 
